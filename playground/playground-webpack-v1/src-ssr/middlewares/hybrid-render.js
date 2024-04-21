@@ -7,7 +7,6 @@ export default ssrMiddleware(({ app, resolve, render, serve }) => {
   // process hybrid routing (ISR, SSG, CSR)
   app.get(resolve.urlPath("*"), async (req, res, next) => {
     const hybridConf = config();
-    if (hybridConf.killSwitch) return next();
 
     // default to SSR and skip SSR as its performed by Quasar SSR
     if (!req.hybridRender || !req.hybridRender.route) return next();
@@ -43,9 +42,6 @@ export default ssrMiddleware(({ app, resolve, render, serve }) => {
 
   // Reset initial URL for the purpose of SSR render resolvement
   app.get(resolve.urlPath("*"), async (req, res, next) => {
-    const hybridConf = config();
-    if (hybridConf.killSwitch) return next();
-
     if (req.hybridRender && req.hybridRender.initialUrl)
       req.url = req.hybridRender.initialUrl;
     next();

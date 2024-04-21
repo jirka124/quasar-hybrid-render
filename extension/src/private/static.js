@@ -7,6 +7,10 @@ export const extensionAssets = [
     src: "templates/middlewares/init-hybrid-render.js",
     out: "src-ssr/middlewares/init-hybrid-render.js",
   },
+  {
+    src: "templates/middlewares/router-hybrid-render.js",
+    out: "src-ssr/middlewares/router-hybrid-render.js",
+  },
   { src: "templates/src-hr/config.js", out: "src-hr/config.js" },
   { src: "templates/src-hr/utils.js", out: "src-hr/utils.js" },
   { src: "templates/src-hr/ssg-routes.json", out: "src-hr/ssg-routes.json" },

@@ -1,3 +1,5 @@
 {
-  "hybrid-render": {}
+  "hybrid-render": {
+    "apiSet": "routerRenderApi"
+  }
 }

@@ -219,7 +219,6 @@ export class PrepareSSG {
   async run() {
     // read ssg defined routes from file if exists
     const ssgRoutes = await this.getDefinedRouteList();
-    // TODO: make SSG work with webpack too
 
     // check if generation is needed for any routes
     const shouldRunGenerate = await this.isNeededGeneration(ssgRoutes);
@@ -235,17 +234,39 @@ export class PrepareSSG {
   }
 
   async getDefinedRouteList() {
-    let ssgRoutes = [];
+    let ssgRoutesManual = [];
 
     // read user defined ssgRoutes if exists
     const routesPath = this.qa.resolve.app(`src-hr/ssg-routes.json`);
     const routesStats = await fs.stat(routesPath).catch((e) => null);
     if (routesStats) {
       const routesFile = await fs.readFile(routesPath, "utf8");
-      ssgRoutes = JSON.parse(routesFile);
+      ssgRoutesManual = JSON.parse(routesFile);
     }
 
-    return ssgRoutes;
+    // import config defined route rules
+    const { routes } = await import(
+      "file://" + this.qa.resolve.app("src-hr/config.js")
+    );
+    const hybridRoutes = routes();
+
+    // filter out ssg routes and its url segments
+    const ssgRoutesAuto = hybridRoutes.routes
+      .filter((r) => r[1].type === "ssg")
+      .map((r) => {
+        const route = r[1];
+        if (Array.isArray(route.list) && route.list.length > 0) {
+          return route.list.map((rr) => rr);
+        } else if (route.url.includes("*"))
+          console.warn(
+            `${route.url} is not primitive, please provide list of urls...`
+          );
+        return route.url;
+      })
+      .flat();
+
+    // join user defined and auto resolved
+    return [...ssgRoutesManual, ssgRoutesAuto];
   }
 
   async isNeededGeneration(ssgRoutes) {

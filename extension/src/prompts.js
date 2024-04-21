@@ -40,5 +40,28 @@
  */
 
 export default function (api) {
-  return []
+  return [
+    {
+      name: "apiSet",
+      type: "list",
+      message: "Choose features you need: ",
+      choices: [
+        {
+          name: "Router API & Render API [ RECOMMENDED ]",
+          short: "Router & Render",
+          value: "routerRenderApi",
+        },
+        {
+          name: "Router API [ ADVANCED ]",
+          short: "Router",
+          value: "routerApi",
+        },
+        {
+          name: "Render API [ ADVANCED ]",
+          short: "Render",
+          value: "renderApi",
+        },
+      ],
+    },
+  ];
 }
