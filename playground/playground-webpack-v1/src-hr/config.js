@@ -50,9 +50,6 @@ const config = () => {
 const routeList = () => {
   // EDIT this with appropriate rules
   return {
-    "/s**": { type: "ssr" },
-    "/*": { type: "ssr" },
-    "/**": { type: "ssr" },
     "/csr**": { type: "csr" }, // everything starting with /csr will be matched
     "/ssg": { type: "ssg" }, // only /ssg will be matched
   };

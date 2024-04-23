@@ -26,38 +26,25 @@ export default ssrMiddleware(({ app, resolve, render, serve }) => {
           if (s.includes("**")) return sum + 2; // segment containing **
           if (/^\*$/.test(s)) return sum + 3; // segment only of *
           if (s.includes("*")) return sum + 4; // segment containing *
-          return sum + 5; // segment not using requlars
+          return sum + 5; // segment not using regulars
         }, 0);
       }
     });
 
-    // if same priority, first will win (js sort is stable now)
-    // order by the points from max to min
-    matches.sort((a, b) => b[1].points - a[1].points);
-    const bestMatch = matches[0];
+    // if same priority, last will win (js sort is stable now)
+    // order by the points from min to max
+    matches.sort((a, b) => a[1].points - b[1].points);
 
-    if (bestMatch) {
-      // in case of match, use route rules
-      const route = bestMatch[1];
+    // loop all matches and make joined route object (using override)
+    const routeObj = matches.reduce((obj, m) => ({ ...obj, ...m[1] }), {});
 
-      if (Object.hasOwn(route, "type")) {
-        const type = route.type;
+    // join route object with config
+    req.hybridRender.extendConfig({
+      route: routeObj,
+    });
 
-        if (type === "csr" || type === "ssg") {
-          req.hybridRender.extendConfig({
-            route: { type },
-          });
-        } else if (type === "isr") {
-          const ttl = Object.hasOwn(route, "ttl") ? route.ttl : null;
+    req.hybridRender.matches = matches;
 
-          req.hybridRender.extendConfig({
-            route: { type, ttl },
-          });
-        }
-      }
-
-      req.hybridRender.matches = matches;
-    }
     next();
   });
 });
