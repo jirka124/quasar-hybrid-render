@@ -270,7 +270,7 @@ class CustomRender extends Render {
   // override any of methods
 }
 
-export default ssrMiddleware(({ app, resolve, render, serve }) => {
+module.exports = ssrMiddleware(({ app, resolve, render, serve }) => {
   app.get(resolve.urlPath("*"), async (req, res, next) => {
     // use custom render class
     req.hybridRender.renderer = new CustomRender();
@@ -278,6 +278,11 @@ export default ssrMiddleware(({ app, resolve, render, serve }) => {
   });
 });
 ```
+
+## Examples
+
+For a demo you may reach out to GitHub repository of extension and see **examples** folder containing demo app both for **Vite and Webpack**.
+[GitHub Examples](https://github.com/jirka124/quasar-hybrid-render/tree/main/examples)
 
 ## Contribution
 

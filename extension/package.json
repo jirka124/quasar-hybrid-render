@@ -1,16 +1,15 @@
 {
   "name": "quasar-app-extension-hybrid-render",
-  "version": "0.0.1",
+  "version": "0.0.3",
   "description": "A extension giving an easy access to widely used rendering techniques on web in your Quasar.js app.",
   "author": "Jiří Žák",
   "license": "MIT",
   "scripts": {
-    "test": "echo \"No test specified\" && exit 0",
-    "publish": "npm run format && npm publish"
+    "test": "echo \"No test specified\" && exit 0"
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/jirka124/quasar-hybrid-render"
+    "url": "https://github.com/jirka124/quasar-hybrid-render.git"
   },
   "bugs": "",
   "homepage": "",
