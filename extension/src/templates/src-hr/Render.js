@@ -3,12 +3,16 @@
   You should not temper with this file, unless really needed.
 */
 
-import { promises as fs } from "fs";
-import path from "path";
-import { getNormPathname, getDefaultFilename, addExtension } from "./utils.js";
-import { config } from "./config.js";
+const fs = require("fs").promises;
+const path = require("path");
+const {
+  getNormPathname,
+  getDefaultFilename,
+  addExtension,
+} = require("./utils.js");
+const { config } = require("./config.js");
 
-export class Render {
+class Render {
   constructor({ SSRContext, middleParams }) {
     this._SSRContext = SSRContext;
     this._middleParams = middleParams;
@@ -168,7 +172,7 @@ export class Render {
   }
 }
 
-export class RenderCSR extends Render {
+class RenderCSR extends Render {
   /* client is always served with prepared SPA index */
 
   constructor({ SSRContext, middleParams }) {
@@ -185,7 +189,7 @@ export class RenderCSR extends Render {
   }
 }
 
-export class RenderSSG extends Render {
+class RenderSSG extends Render {
   /* first HTML gets saved, then client is served */
 
   constructor({ SSRContext, middleParams }) {
@@ -211,7 +215,7 @@ export class RenderSSG extends Render {
   }
 }
 
-export class RenderISR extends Render {
+class RenderISR extends Render {
   /* first client is served, then HTML gets saved */
 
   constructor({ SSRContext, middleParams }) {
@@ -241,3 +245,5 @@ export class RenderISR extends Render {
     await this.writePage();
   }
 }
+
+module.exports = { Render, RenderCSR, RenderSSG, RenderISR };

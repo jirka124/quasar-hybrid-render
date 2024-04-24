@@ -4,9 +4,9 @@
   "description": "A extension giving an easy access to widely used rendering techniques on web in your Quasar.js app.",
   "author": "Jiří Žák",
   "license": "MIT",
-  "type": "module",
   "scripts": {
-    "test": "echo \"No test specified\" && exit 0"
+    "test": "echo \"No test specified\" && exit 0",
+    "publish": "npm run format && npm publish"
   },
   "repository": {
     "type": "git",

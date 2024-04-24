@@ -1,4 +1,4 @@
-export const extensionAssets = [
+module.exports.extensionAssets = [
   {
     src: "templates/middlewares/hybrid-render.js",
     out: "src-ssr/middlewares/hybrid-render.js",

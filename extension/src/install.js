@@ -1,9 +1,9 @@
-import { Blob } from "buffer";
-import { promises as fs } from "fs";
-import crypto from "crypto";
-import colors from "colors/safe.js";
+const { Blob } = require("buffer");
+const fs = require("fs").promises;
+const crypto = require("crypto");
+const colors = require("colors/safe.js");
 
-import { extensionAssets } from "./private/static.js";
+const { extensionAssets } = require("./private/static.js");
 
 const readFile = async (filepath) => {
   // check if file exists
@@ -23,7 +23,7 @@ const hashup = async (string) => {
  *
  * Docs: https://quasar.dev/app-extensions/development-guide/install-api
  */
-export default async function (api) {
+module.exports = async function (api, ctx) {
   console.log();
   console.log(colors.cyan(`Running installation of ${api.extId}.`));
   console.log();
@@ -70,4 +70,4 @@ export default async function (api) {
     } else console.log(`☑ Asset "${asset.out}" up to date, skipping...`);
   }
   api.onExitLog(colors.cyan(`Installation of ${api.extId} done.`));
-}
+};

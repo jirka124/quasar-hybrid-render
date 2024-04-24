@@ -1,9 +1,9 @@
-import _ from "lodash";
-import path from "path";
-import axios from "axios";
-import { promises as fs } from "fs";
+const _ = require("lodash");
+const path = require("path");
+const axios = require("axios");
+const fs = require("fs").promises;
 
-export class PrepareSPA {
+class PrepareSPA {
   _quasarApi;
   _quasarConf;
   _hybridConf;
@@ -64,9 +64,9 @@ export class PrepareSPA {
 
     // TODO: if brakes ask and get help
     //"@quasar/app-vite/lib/helpers/html-template.js"
-    const { transformHtml } = await import(
-      "file://" + this.qa.resolve.cli("lib/helpers/html-template.js")
-    );
+    const { transformHtml } = require(this.qa.resolve.cli(
+      "lib/helpers/html-template.js"
+    ));
 
     const origMode = this.qc.ctx.mode;
     const origModeName = this.qc.ctx.modeName;
@@ -192,7 +192,7 @@ export class PrepareSPA {
   }
 }
 
-export class PrepareSSG {
+class PrepareSSG {
   _quasarApi;
   _quasarConf;
   _hybridConf;
@@ -245,9 +245,7 @@ export class PrepareSSG {
     }
 
     // import config defined route rules
-    const { routes } = await import(
-      "file://" + this.qa.resolve.app("src-hr/config.js")
-    );
+    const { routes } = require(this.qa.resolve.app("src-hr/config.js"));
     const hybridRoutes = routes();
 
     // filter out ssg routes and its url segments
@@ -296,9 +294,7 @@ export class PrepareSSG {
     let server = null;
     if (this.qc.ctx.prod && shouldRunGenerate) {
       // run server and get its details
-      const { default: srv } = await import(
-        "file://" + path.join(this.distDir, "index.js")
-      );
+      const { default: srv } = require(path.join(this.distDir, "index.js"));
 
       server = await srv.default;
     }
@@ -372,7 +368,7 @@ export class PrepareSSG {
   }
 }
 
-export class ConcurrentQueue {
+class ConcurrentQueue {
   _concurrentNumber;
   _coolingTimeout;
   _calls = [];
@@ -454,3 +450,5 @@ export class ConcurrentQueue {
     this.#enqueueActive = false;
   }
 }
+
+module.exports = { PrepareSPA, PrepareSSG, ConcurrentQueue };

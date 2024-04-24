@@ -1,4 +1,4 @@
-import { PrepareSPA, PrepareSSG } from "./private/Prepare.js";
+const { PrepareSPA, PrepareSSG } = require("./private/Prepare.js");
 
 // adds/removes middlewares used based on requested feature set
 const manageMiddlewares = ({
@@ -54,7 +54,8 @@ const manageMiddlewares = ({
  *
  * Docs: https://quasar.dev/app-extensions/development-guide/index-api
  */
-export default async function (api, ctx) {
+module.exports = async function (api, ctx) {
+  //export default async function (api, ctx) {
   // TODO: work with compatibility
   /*
   api.compatibleWith("quasar", "^2.0.0");
@@ -67,9 +68,7 @@ export default async function (api, ctx) {
   }
   */
 
-  const { config } = await import(
-    "file://" + api.resolve.app("src-hr/config.js")
-  );
+  const { config } = require(api.resolve.app("src-hr/config.js"));
   const hybridConf = config();
 
   const usesRouterApi =
@@ -111,4 +110,4 @@ export default async function (api, ctx) {
       await new PrepareSSG({ api, quasarConf, hybridConf }).run();
     }
   });
-}
+};

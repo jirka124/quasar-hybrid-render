@@ -3,12 +3,12 @@
   You should not temper with this file, unless really needed.
 */
 
-import { ssrMiddleware } from "quasar/wrappers/index";
+const { ssrMiddleware } = require("quasar/wrappers/index");
 
-import { RenderCSR, RenderSSG, RenderISR } from "../../src-hr/Render.js";
-import { config } from "../../src-hr/config.js";
+const { RenderCSR, RenderSSG, RenderISR } = require("../../src-hr/Render.js");
+const { config } = require("../../src-hr/config.js");
 
-export default ssrMiddleware(({ app, resolve, render, serve }) => {
+module.exports = ssrMiddleware(({ app, resolve, render, serve }) => {
   // process hybrid routing (ISR, SSG, CSR)
   app.get(resolve.urlPath("*"), async (req, res, next) => {
     const hybridConf = config();

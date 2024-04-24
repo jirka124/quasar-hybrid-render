@@ -13,11 +13,11 @@
 Extension is composed of two main parts, "Router API and Render API". These together allows for a simple plug-and-play, all you need to do is defined route rules inside of config file (see configuration) and extension will take care of the rest.
 Using both Router API and Render API will allow you to use CSR / SSG / ISR by defining just a single rule.
 
-### Router API intro
+### Router API into
 
 Allows for mapping of route properties to a given url pattern. At runtime Router API matches requested url with defined patterns and evaluates the best match, whose properties are then used by Render API.
 
-### Render API intro
+### Render API into
 
 Allows for using different rendering techniques based on input parameters given to it. At build time CSR entry file is generated and if applicable SSG pages are prerendered.
 At runtime requested technique is used for rendering the page and result is given to the user. API allows for overriding defaults and extending rendering by own rendering techniques.
@@ -264,7 +264,7 @@ If you aint fully satisfied with how any of renderers work by default or just wa
 There is a way to do so, you may create new class, extend any of renderer classes found in (**hr-src/Render.js**), make requested changes and set it's instance to a **req.hybridRender.renderer**.
 
 ```javascript
-// const Renderer = require("path/to/Renderer");
+// import Render.js
 
 class CustomRender extends Render {
   // override any of methods
