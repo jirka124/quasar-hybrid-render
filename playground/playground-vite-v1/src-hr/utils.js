@@ -54,6 +54,25 @@ const addExtension = ({
   return filename;
 };
 
+class ExpressError extends Error {
+  constructor(message = `HYBRID_EXT_UNKNOWN`, status = 500, options) {
+    super(message, options);
+    this.status = status;
+  }
+}
+
+const handleError = (err) => {
+  if (
+    !Object.hasOwn(err, "message") ||
+    !err.message.startsWith("HYBRID_EXT_")
+  ) {
+    // is not recognised as internal known error, mark as unknown
+    err.message = `HYBRID_EXT_UNKNOWN: ${err.message || ""}`;
+  }
+
+  return err;
+};
+
 module.exports = {
   isNotNullObject,
   deepMerge,
@@ -61,4 +80,6 @@ module.exports = {
   getNormPathname,
   getDefaultFilename,
   addExtension,
+  ExpressError,
+  handleError,
 };

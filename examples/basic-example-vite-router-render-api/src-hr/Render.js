@@ -3,12 +3,17 @@
   You should not temper with this file, unless really needed.
 */
 
-import { promises as fs } from "fs";
-import path from "path";
-import { getNormPathname, getDefaultFilename, addExtension } from "./utils.js";
-import { config } from "./config.js";
+const fs = require("fs").promises;
+const path = require("path");
+const {
+  getNormPathname,
+  getDefaultFilename,
+  addExtension,
+  ExpressError,
+} = require("./utils.js");
+const { config } = require("./config.js");
 
-export class Render {
+class Render {
   constructor({ SSRContext, middleParams }) {
     this._SSRContext = SSRContext;
     this._middleParams = middleParams;
@@ -74,8 +79,12 @@ export class Render {
 
   async serveHTML() {
     if (this._renderedHTML === null) {
-      if (process.env.DEBUGGING) console.error("page file not provided");
-      this.res.status(500).send("500 | Internal Server Error");
+      throw new ExpressError("HYBRID_EXT_RENDERED_HTML_IS_NULL", 404, {
+        stack: {
+          method: "serveHTML",
+          reason: "Cannot serve null as html response to user.",
+        },
+      });
     } else {
       this.res.setHeader("Content-Type", "text/html");
       this.res.send(this._renderedHTML);
@@ -132,7 +141,10 @@ export class Render {
     if (content !== null) {
       await fs.mkdir(path.dirname(filePath), { recursive: true });
       await fs.writeFile(filePath, content);
-    } else throw new Error("make some error system already!!");
+    } else
+      throw new ExpressError("HYBRID_EXT_RENDERED_CONTENT_IS_NULL", 500, {
+        stack: { method: "writeFile", reason: "Cannot write null to a file." },
+      });
   }
 
   async readPage() {
@@ -153,7 +165,12 @@ export class Render {
         if (err.code) return this.res.redirect(err.code, err.url);
         return this.res.redirect(err.url);
       } else if (err.code === 404)
-        return this.res.status(404).send("404 | Page Not Found");
+        throw new ExpressError("HYBRID_EXT_PAGE_NOT_FOUND", 404, {
+          stack: {
+            method: "renderPage",
+            reason: "Unable to find the requested page.",
+          },
+        });
       else if (process.env.DEV)
         return this._middleParams.serve.error({
           err,
@@ -161,14 +178,19 @@ export class Render {
           res: this.res,
         });
       else {
-        if (process.env.DEBUGGING) console.error(err.stack);
-        return this.res.status(500).send("500 | Internal Server Error");
+        throw new ExpressError("HYBRID_EXT_UNEXPECTED_RENDER_ERR", 500, {
+          stack: {
+            method: "renderPage",
+            reason: "Quasar page render failed with unknown error.",
+            errStack: err.stack,
+          },
+        });
       }
     }
   }
 }
 
-export class RenderCSR extends Render {
+class RenderCSR extends Render {
   /* client is always served with prepared SPA index */
 
   constructor({ SSRContext, middleParams }) {
@@ -185,7 +207,7 @@ export class RenderCSR extends Render {
   }
 }
 
-export class RenderSSG extends Render {
+class RenderSSG extends Render {
   /* first HTML gets saved, then client is served */
 
   constructor({ SSRContext, middleParams }) {
@@ -211,7 +233,7 @@ export class RenderSSG extends Render {
   }
 }
 
-export class RenderISR extends Render {
+class RenderISR extends Render {
   /* first client is served, then HTML gets saved */
 
   constructor({ SSRContext, middleParams }) {
@@ -241,3 +263,5 @@ export class RenderISR extends Render {
     await this.writePage();
   }
 }
+
+module.exports = { Render, RenderCSR, RenderSSG, RenderISR };

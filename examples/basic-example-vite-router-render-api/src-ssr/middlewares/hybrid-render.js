@@ -3,51 +3,57 @@
   You should not temper with this file, unless really needed.
 */
 
-import { ssrMiddleware } from "quasar/wrappers/index";
+const { ssrMiddleware } = require("quasar/wrappers/index");
 
-import { RenderCSR, RenderSSG, RenderISR } from "../../src-hr/Render.js";
-import { config } from "../../src-hr/config.js";
+const { RenderCSR, RenderSSG, RenderISR } = require("../../src-hr/Render.js");
+const { handleError } = require("../../src-hr/utils.js");
+const { config } = require("../../src-hr/config.js");
 
-export default ssrMiddleware(({ app, resolve, render, serve }) => {
+module.exports = ssrMiddleware(({ app, resolve, render, serve }) => {
   // process hybrid routing (ISR, SSG, CSR)
   app.get(resolve.urlPath("*"), async (req, res, next) => {
-    const hybridConf = config();
+    try {
+      const hybridConf = config();
 
-    // default to SSR and skip SSR as its performed by Quasar SSR
-    if (!req.hybridRender || !req.hybridRender.route) return next();
+      // default to SSR and skip SSR as its performed by Quasar SSR
+      if (!req.hybridRender || !req.hybridRender.route) return next();
 
-    if (!req.hybridRender.route.type || req.hybridRender.route.type === "ssr")
-      return next();
+      if (!req.hybridRender.route.type || req.hybridRender.route.type === "ssr")
+        return next();
 
-    if (req.hybridRender.route.type === "ssg" && hybridConf.SSG.actAsSSR)
-      return next();
-    if (req.hybridRender.route.type === "isr" && hybridConf.ISR.actAsSSR)
-      return next();
+      if (req.hybridRender.route.type === "ssg" && hybridConf.SSG.actAsSSR)
+        return next();
+      if (req.hybridRender.route.type === "isr" && hybridConf.ISR.actAsSSR)
+        return next();
 
-    const hr = req.hybridRender;
-    const route = hr.route;
+      const hr = req.hybridRender;
+      const route = hr.route;
 
-    hr.initialUrl = req.url;
+      hr.initialUrl = req.url;
 
-    let renderer = null;
-    const renderOptions = {
-      SSRContext: { req, res },
-      middleParams: { resolve, render, serve },
-    };
+      let renderer = null;
+      const renderOptions = {
+        SSRContext: { req, res },
+        middleParams: { resolve, render, serve },
+      };
 
-    // choose appropriate renderer and run it to serve request
-    if (hr.renderer) renderer = renderer;
-    else if (route.type === "csr") renderer = new RenderCSR(renderOptions);
-    else if (route.type === "ssg") renderer = new RenderSSG(renderOptions);
-    else if (route.type === "isr") renderer = new RenderISR(renderOptions);
+      // choose appropriate renderer and run it to serve request
+      if (hr.renderer) renderer = renderer;
+      else if (route.type === "csr") renderer = new RenderCSR(renderOptions);
+      else if (route.type === "ssg") renderer = new RenderSSG(renderOptions);
+      else if (route.type === "isr") renderer = new RenderISR(renderOptions);
 
-    if (!renderer) next();
-    else await renderer.run();
+      if (!renderer) next();
+      else await renderer.run();
+    } catch (err) {
+      // propagate error to error handler
+      next(handleError(err));
+    }
   });
 
   // Reset initial URL for the purpose of SSR render resolvement
   app.get(resolve.urlPath("*"), async (req, res, next) => {
-    if (req.hybridRender && req.hybridRender.initialUrl)
+    if (req && req.hybridRender && req.hybridRender.initialUrl)
       req.url = req.hybridRender.initialUrl;
     next();
   });

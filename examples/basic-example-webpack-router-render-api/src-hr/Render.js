@@ -9,6 +9,7 @@ const {
   getNormPathname,
   getDefaultFilename,
   addExtension,
+  ExpressError,
 } = require("./utils.js");
 const { config } = require("./config.js");
 
@@ -78,8 +79,12 @@ class Render {
 
   async serveHTML() {
     if (this._renderedHTML === null) {
-      if (process.env.DEBUGGING) console.error("page file not provided");
-      this.res.status(500).send("500 | Internal Server Error");
+      throw new ExpressError("HYBRID_EXT_RENDERED_HTML_IS_NULL", 404, {
+        stack: {
+          method: "serveHTML",
+          reason: "Cannot serve null as html response to user.",
+        },
+      });
     } else {
       this.res.setHeader("Content-Type", "text/html");
       this.res.send(this._renderedHTML);
@@ -136,7 +141,10 @@ class Render {
     if (content !== null) {
       await fs.mkdir(path.dirname(filePath), { recursive: true });
       await fs.writeFile(filePath, content);
-    } else throw new Error("make some error system already!!");
+    } else
+      throw new ExpressError("HYBRID_EXT_RENDERED_CONTENT_IS_NULL", 500, {
+        stack: { method: "writeFile", reason: "Cannot write null to a file." },
+      });
   }
 
   async readPage() {
@@ -157,7 +165,12 @@ class Render {
         if (err.code) return this.res.redirect(err.code, err.url);
         return this.res.redirect(err.url);
       } else if (err.code === 404)
-        return this.res.status(404).send("404 | Page Not Found");
+        throw new ExpressError("HYBRID_EXT_PAGE_NOT_FOUND", 404, {
+          stack: {
+            method: "renderPage",
+            reason: "Unable to find the requested page.",
+          },
+        });
       else if (process.env.DEV)
         return this._middleParams.serve.error({
           err,
@@ -165,8 +178,13 @@ class Render {
           res: this.res,
         });
       else {
-        if (process.env.DEBUGGING) console.error(err.stack);
-        return this.res.status(500).send("500 | Internal Server Error");
+        throw new ExpressError("HYBRID_EXT_UNEXPECTED_RENDER_ERR", 500, {
+          stack: {
+            method: "renderPage",
+            reason: "Quasar page render failed with unknown error.",
+            errStack: err.stack,
+          },
+        });
       }
     }
   }
