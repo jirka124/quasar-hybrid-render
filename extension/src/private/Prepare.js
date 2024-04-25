@@ -331,7 +331,10 @@ class PrepareSSG {
 
     // make list of callbacks for route generations
     const calls = urls.map((url) => {
-      return () => axios.get(url);
+      return () =>
+        axios.get(url).catch((err) => {
+          console.error("SSG prerender failed with: ", err);
+        });
     });
 
     // create and run parallel queue
