@@ -3,12 +3,12 @@
   You should not temper with this file, unless really needed.
 */
 
-const { ssrMiddleware } = require("quasar/wrappers/index");
-const { init } = require("../../src-hr/config.js");
-const { handleError } = require("../../src-hr/utils.js");
-const { extendConfig } = require("../../src-hr/utils.js");
+import { ssrMiddleware } from "quasar/wrappers";
+import { init } from "../../src-hr/config.cjs";
+import { handleError } from "../../src-hr/utils.cjs";
+import { extendConfig } from "../../src-hr/utils.cjs";
 
-module.exports = ssrMiddleware(({ app, resolve, render, serve }) => {
+export default ssrMiddleware(({ app, resolve, render, serve }) => {
   app.get(resolve.urlPath("*"), async (req, res, next) => {
     try {
       // initiate hybridRender with defaults

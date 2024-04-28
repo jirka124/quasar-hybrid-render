@@ -1,7 +1,7 @@
 import { ssrMiddleware } from "quasar/wrappers/index";
 
 import { promises as fs } from "fs";
-import { config } from "../../src-hr/config.js";
+import { config } from "../../src-hr/config.cjs";
 
 export default ssrMiddleware(({ app, resolve, render, serve }) => {
   app.post("/api/path-reinv", async (req, res, next) => {

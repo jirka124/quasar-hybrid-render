@@ -10,8 +10,8 @@ const {
   getDefaultFilename,
   addExtension,
   ExpressError,
-} = require("./utils.js");
-const { config } = require("./config.js");
+} = require("./utils.cjs");
+const { config } = require("./config.cjs");
 
 class Render {
   constructor({ SSRContext, middleParams }) {

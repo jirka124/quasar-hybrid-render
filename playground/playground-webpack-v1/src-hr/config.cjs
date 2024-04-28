@@ -70,6 +70,4 @@ const routes = () => {
   };
 };
 
-module.exports.init = init;
-module.exports.config = config;
-module.exports.routes = routes;
+module.exports = { init, config, routes };
