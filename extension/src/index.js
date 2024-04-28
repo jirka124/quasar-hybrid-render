@@ -1,4 +1,4 @@
-const { PrepareSPA, PrepareSSG } = require("./private/Prepare.js");
+const { PrepareSPA, PrepareSSG } = require("./private/Prepare.cjs");
 
 // adds/removes middlewares used based on requested feature set
 const manageMiddlewares = ({
@@ -68,7 +68,7 @@ module.exports = async function (api, ctx) {
   }
   */
 
-  const { config } = require(api.resolve.app("src-hr/config.js"));
+  const { config } = require(api.resolve.app("src-hr/config.cjs"));
   const hybridConf = config();
 
   const usesRouterApi =

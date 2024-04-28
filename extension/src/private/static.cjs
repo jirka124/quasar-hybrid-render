@@ -11,10 +11,10 @@ module.exports.extensionAssets = [
     src: "templates/middlewares/router-hybrid-render.js",
     out: "src-ssr/middlewares/router-hybrid-render.js",
   },
-  { src: "templates/src-hr/config.js", out: "src-hr/config.js" },
-  { src: "templates/src-hr/utils.js", out: "src-hr/utils.js" },
+  { src: "templates/src-hr/config.cjs", out: "src-hr/config.cjs" },
+  { src: "templates/src-hr/utils.cjs", out: "src-hr/utils.cjs" },
   { src: "templates/src-hr/ssg-routes.json", out: "src-hr/ssg-routes.json" },
-  { src: "templates/src-hr/Render.js", out: "src-hr/Render.js" },
+  { src: "templates/src-hr/Render.cjs", out: "src-hr/Render.cjs" },
   {
     src: "templates/src-hr/hybrid-render-flag.d.ts",
     out: "src-hr/hybrid-render-flag.d.ts",

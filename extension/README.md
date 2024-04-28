@@ -60,6 +60,12 @@ Extension was tested with following versions (but may work with others too):
 | ---------------- | ------------------- |
 | ^1.3.0           | ^3.0.0              |
 
+The following versions are being prepared:
+
+| @quasar/app-vite | @quasar/app-webpack |
+| ---------------- | ------------------- |
+| ^2.0.0-beta      | ^4.0.0-beta         |
+
 ## Usage
 
 If you followed the [Installation](#installation) guide, extension will automatically run every time you run your Quasar project **in a SSR mode**.
@@ -83,7 +89,7 @@ quasar build -m ssr
 :warning: **Only applicable if using both Router API and Render API!**
 Basic usage allows simple and fast usage of all build-in rendering methods (SSR, CSR, SSG, ISR). All one must know is Router API and it's options.
 
-You may use rules described in [Router API](#router-api) to define what page/s use/s what rendering technique. Easiest way to accomplish so, is using **config file** exposed as (**hr-src/config.js**) in your project.
+You may use rules described in [Router API](#router-api) to define what page/s use/s what rendering technique. Easiest way to accomplish so, is using **config file** exposed as (**hr-src/config.cjs**) in your project.
 
 The example code that shows some basic mapping:
 
@@ -104,7 +110,7 @@ For more details on Router API, please see [Router API](#router-api). You will f
 
 ## Router API
 
-for **Router API** you may play with following (**hr-src/config.js**):
+for **Router API** you may play with following (**hr-src/config.cjs**):
 
 ```javascript
 const routeList = () => {
@@ -162,7 +168,7 @@ All matching rules are used to allow inheritance, **but pattern with higher prio
 
 ## Render API
 
-for **Render API** you may play with following (**hr-src/config.js**):
+for **Render API** you may play with following (**hr-src/config.cjs**):
 
 ```javascript
 const init = () => {
@@ -234,7 +240,7 @@ req.hybridRender.extendConfig({
 
 ### SSG while using Render API only
 
-The only way to defined routes that will be prerendered at build time **while not using Router API** is using a JSON file (**hr-src/ssg-routes.json**). This file should include an array of paths that should be prerendered.
+The only way to define routes that will be prerendered at build time **while not using Router API** is using a JSON file (**hr-src/ssg-routes.json**). This file should include an array of paths that should be prerendered.
 The paths defined in this file are joined with paths defined by Router API.
 
 The example of such file would be (**hr-src/ssg-routes.json**):
@@ -261,16 +267,16 @@ If you know what you do, you may define the order yourself by simply using them 
 
 There is a reason for exposing most of extension scripts to user, in order to allow easy extendability and understanding many files are stored in user project itself.
 If you aint fully satisfied with how any of renderers work by default or just want to make your own renderer.
-There is a way to do so, you may create new class, extend any of renderer classes found in (**hr-src/Render.js**), make requested changes and set it's instance to a **req.hybridRender.renderer**.
+There is a way to do so, you may create new class, extend any of renderer classes found in (**hr-src/Render.cjs**), make requested changes and set it's instance to a **req.hybridRender.renderer**.
 
 ```javascript
-// import Render.js
+import { Render } from "./path/to/Render.cjs";
 
 class CustomRender extends Render {
   // override any of methods
 }
 
-module.exports = ssrMiddleware(({ app, resolve, render, serve }) => {
+export default ssrMiddleware(({ app, resolve, render, serve }) => {
   app.get(resolve.urlPath("*"), async (req, res, next) => {
     // use custom render class
     req.hybridRender.renderer = new CustomRender();

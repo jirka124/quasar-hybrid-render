@@ -1,4 +1,4 @@
-const { extensionAssets } = require("./private/static.js");
+const { extensionAssets } = require("./private/static.cjs");
 
 /**
  * Quasar App Extension uninstall script

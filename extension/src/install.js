@@ -3,7 +3,7 @@ const fs = require("fs").promises;
 const crypto = require("crypto");
 const colors = require("colors/safe.js");
 
-const { extensionAssets } = require("./private/static.js");
+const { extensionAssets } = require("./private/static.cjs");
 
 const readFile = async (filepath) => {
   // check if file exists

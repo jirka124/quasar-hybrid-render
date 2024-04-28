@@ -68,21 +68,15 @@ class PrepareSPA {
       "lib/helpers/html-template.js"
     ));
 
-    const origMode = this.qc.ctx.mode;
-    const origModeName = this.qc.ctx.modeName;
-
-    // confuse builder into thinking we run spa
-    this.qc.ctx.mode = { spa: true };
-    this.qc.ctx.modeName = "spa";
-    this.qc.htmlVariables.MODE = "spa";
+    // confuse builder into thinking we run spa by providing false config
+    const qc = {
+      ...this.qc,
+      ctx: { ...this.qc.ctx, mode: { spa: true }, modeName: "spa" },
+      htmlVariables: { ...this.qc.htmlVariables, MODE: "spa" },
+    };
 
     // use quasar helper to build the entry
-    const html = transformHtml(indexHTML, this.qc);
-
-    // regress initial configuration
-    this.qc.ctx.mode = origMode;
-    this.qc.ctx.modeName = origModeName;
-    this.qc.htmlVariables.MODE = origModeName;
+    const html = transformHtml(indexHTML, qc);
 
     return html;
   }
@@ -245,7 +239,7 @@ class PrepareSSG {
     }
 
     // import config defined route rules
-    const { routes } = require(this.qa.resolve.app("src-hr/config.js"));
+    const { routes } = require(this.qa.resolve.app("src-hr/config.cjs"));
     const hybridRoutes = routes();
 
     // filter out ssg routes and its url segments
