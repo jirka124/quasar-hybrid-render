@@ -1,3 +1,4 @@
+const path = require("path");
 const { PrepareSPA, PrepareSSG } = require("./private/Prepare.cjs");
 
 // adds/removes middlewares used based on requested feature set
@@ -48,13 +49,46 @@ const manageMiddlewares = ({
   }
 };
 
+// prevents page auto reloads when page file changess in background in Vite
+const manageIgnoreHMR = ({ api, quasarConf, hybridConf }) => {
+  if (api.hasVite && api.ctx.dev) {
+    // make sure live reload watch ignore property exists
+    quasarConf.devServer = quasarConf.devServer || {};
+    quasarConf.devServer.watch = quasarConf.devServer.watch || {};
+    quasarConf.devServer.watch.ignored =
+      quasarConf.devServer.watch.ignored || [];
+
+    // check if extension's srcDir is ignored already
+    const outDirPath = api.resolve.app(
+      path.join(".quasar", hybridConf.srcDir, "**")
+    );
+    let outDirIndex = null;
+    if (Array.isArray(quasarConf.devServer.watch.ignored)) {
+      outDirIndex = quasarConf.devServer.watch.ignored.indexOf(outDirPath);
+    } else if (typeof quasarConf.devServer.watch.ignored === "string") {
+      // encapsulate the single ignore into array of ignores
+      quasarConf.devServer.watch.ignored = [quasarConf.devServer.watch.ignored];
+      outDirIndex = quasarConf.devServer.watch.ignored.indexOf(outDirPath);
+    }
+
+    // push ignore of extension srcDir (to prevent reloads when pages are being saved)
+    // or warn in case of unsuccess, for example function ignore attr
+    if (outDirIndex === null)
+      console.warn(
+        "Hybrid Render was unable to set live reload ignored paths..."
+      );
+    else if (outDirIndex < 0)
+      quasarConf.devServer.watch.ignored.push(outDirPath);
+  }
+};
+
 /**
  * Quasar App Extension index/runner script
  * (runs on each dev/build)
  *
  * Docs: https://quasar.dev/app-extensions/development-guide/index-api
  */
-module.exports = async function (api, ctx) {
+module.exports = async function (api) {
   //export default async function (api, ctx) {
   // TODO: work with compatibility
   /*
@@ -79,13 +113,16 @@ module.exports = async function (api, ctx) {
     !hybridConf.killSwitch &&
     ["routerRenderApi", "renderApi"].includes(api.prompts.apiSet);
 
-  api.extendQuasarConf((conf, api) => {
+  api.extendQuasarConf((quasarConf, api) => {
     // manage runtime middlewares
     manageMiddlewares({
-      middlewares: conf.ssr.middlewares,
+      middlewares: quasarConf.ssr.middlewares,
       usesRouterApi,
       usesRenderApi,
     });
+
+    // manage ignore of HMR for pages in Vite builds
+    manageIgnoreHMR({ api, quasarConf, hybridConf });
   });
 
   // kill after middleware management if no render API (middles must run so they are removed appropriate)

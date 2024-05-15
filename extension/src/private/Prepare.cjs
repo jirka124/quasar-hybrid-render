@@ -2,6 +2,7 @@ const _ = require("lodash");
 const path = require("path");
 const axios = require("axios");
 const fs = require("fs").promises;
+const { ConcurrentQueue } = require("../templates/src-hr/utils.cjs");
 
 class PrepareSPA {
   _quasarApi;
@@ -365,87 +366,4 @@ class PrepareSSG {
   }
 }
 
-class ConcurrentQueue {
-  _concurrentNumber;
-  _coolingTimeout;
-  _calls = [];
-
-  #enqueueActive = false;
-  #queuePromise = null;
-  #queueIndex = 0;
-  #enqueued = 0;
-  #enqueueTimeouts = [];
-
-  constructor(config, calls) {
-    this._concurrentNumber = Object.hasOwn(config, "concurrentNumber")
-      ? config.concurrentNumber
-      : 2;
-    this._coolingTimeout = Object.hasOwn(config, "coolingTimeout")
-      ? config.coolingTimeout
-      : 500;
-    this._calls = calls || [];
-  }
-
-  async run() {
-    // enqueue first batch
-    this.enqueue();
-
-    // save and return a promise of run end
-    return new Promise((res, rej) => {
-      this.#queuePromise = { res, rej };
-    });
-  }
-
-  deleteTimeout(timeout) {
-    // clear and delete defined timeout from queue
-    const index = this.#enqueueTimeouts.indexOf(timeout);
-
-    if (index > -1) {
-      clearTimeout(this.#enqueueTimeouts[index]);
-      this.#enqueueTimeouts.splice(index, 1);
-    }
-  }
-
-  async enqueue() {
-    // make sure method is access only by one thread at a time
-    if (this.#enqueueActive) return setTimeout(this.enqueue, 0);
-    this.#enqueueActive = true;
-
-    const remainingCallCount = this._calls.length - this.#queueIndex;
-    const enqueableCount =
-      this._concurrentNumber - (this.#enqueued + this.#enqueueTimeouts.length);
-    const toQueueCount = Math.min(remainingCallCount, enqueableCount);
-
-    // resolve if all calls made and done
-    if (remainingCallCount < 1 && this.#enqueued < 1)
-      return this.#queuePromise.res();
-
-    // enqueue allowed calls in parrallel
-    for (let i = 0; i < toQueueCount; i++) {
-      const call = this._calls[this.#queueIndex++];
-      this.#enqueued++;
-
-      call()
-        .then((r) => {
-          this.#enqueued--;
-          const timeout = setTimeout(() => {
-            // delete timeout from queue
-            this.deleteTimeout(timeout);
-
-            // perform new enqueuement
-            this.enqueue();
-          }, this._coolingTimeout);
-          this.#enqueueTimeouts.push(timeout);
-        })
-        .catch((e) => {
-          this.#enqueueActive = false;
-          this.#enqueueTimeouts.map((t) => this.deleteTimeout(t));
-          this.#queuePromise.rej(e);
-        });
-    }
-
-    this.#enqueueActive = false;
-  }
-}
-
-module.exports = { PrepareSPA, PrepareSSG, ConcurrentQueue };
+module.exports = { PrepareSPA, PrepareSSG };

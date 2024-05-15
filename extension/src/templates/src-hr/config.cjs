@@ -3,6 +3,7 @@
   But you SHOULD EDIT IT, unless specified other.
   In case of issues, please consult the documentation "https://github.com/jirka124/quasar-hybrid-render".
 */
+const { getNormPathname } = require("./utils.cjs");
 
 const init = () => {
   return {
@@ -30,6 +31,11 @@ const config = () => {
     ISR: {
       actAsSSR: false, // will not act as SSR
     },
+    SWR: {
+      actAsSSR: false, // will not act as SSR
+      queueConcurrence: 3, // how many hints to resolve at a time
+      queueCooling: 150, // how many [ms] to wait between resolves
+    },
   };
 };
 
@@ -43,10 +49,7 @@ const routes = () => {
   /* DO NOT TOUCH THIS */
   const routes = Object.entries(routeList()).map(([urlPattern, options]) => {
     // remove trailing / character if not / path
-    let url =
-      urlPattern.endsWith("/") && urlPattern !== "/"
-        ? urlPattern.slice(0, -1)
-        : urlPattern;
+    let url = getNormPathname(urlPattern);
 
     // match a single * and resolve it as allow 1+ of not "/" chars
     // for /a/* will allow /a/b but not /a/b/c, ...
