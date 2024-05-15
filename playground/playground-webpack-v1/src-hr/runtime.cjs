@@ -3,8 +3,101 @@
   You should not temper with this file, unless really needed.
 */
 
-const swrChecks = new Map();
+const { deepCopy } = require("./utils.cjs");
 
-const runtime = { swrChecks };
+class SWRHints {
+  constructor() {
+    this._pageMap = new Map(); // mapping key:value of pageUniqueId:SWRHintGroup
+  }
+
+  getHintGroup(pageUniqueId) {
+    return this._pageMap.get(pageUniqueId) || new SWRHintGroup();
+  }
+  setHintGroup(pageUniqueId, hintGroup) {
+    return this._pageMap.set(pageUniqueId, hintGroup);
+  }
+}
+
+const swrHints = new SWRHints();
+
+class SWRHintGroup {
+  constructor() {
+    this._hintObj = {}; // mapping key:value of hintUniqueName:SWRHint
+  }
+
+  // returns its deep copy encapsulated in object used by runtime
+  useHintGroup() {
+    return {
+      hintGroup: this.copy(),
+      currInd: 0,
+    };
+  }
+
+  copy() {
+    const newHintGroup = new SWRHintGroup();
+
+    // iterate hint entries and save to new group as copy
+    const entries = Object.entries(this._hintObj);
+    for (let i = 0, len = entries.length; i < len; i++) {
+      const [hintName, hint] = entries[i];
+
+      newHintGroup._hintObj[hintName] = hint.copy();
+    }
+
+    return newHintGroup;
+  }
+
+  getHint(hintUniqueName) {
+    return this._hintObj[hintUniqueName];
+  }
+  createHint(hintUniqueName) {
+    const hint = new SWRHint();
+    this._hintObj[hintUniqueName] = hint;
+    return hint;
+  }
+  deleteHint(hintUniqueName) {
+    delete this._hintObj[hintUniqueName];
+  }
+}
+
+class SWRHint {
+  constructor() {
+    this._order = Infinity;
+    this._used = null;
+    this._func = null;
+    this._result = null;
+  }
+
+  copy() {
+    const newHint = new SWRHint();
+
+    // copy all properties as copies to newHint
+    newHint._order = deepCopy(this._order);
+    newHint._used = deepCopy(this._used);
+    newHint._func = deepCopy(this._func);
+    newHint._result = deepCopy(this._result);
+
+    return newHint;
+  }
+
+  setOrder(order) {
+    this._order = order;
+    return this;
+  }
+  setUsed(used) {
+    this._used = used;
+    return this;
+  }
+  setFunc(func) {
+    this._func = func;
+    return this;
+  }
+  setResult(result) {
+    this._result = result;
+    return this;
+  }
+}
+
+const runtime = { swrHints };
 
 module.exports = { runtime };

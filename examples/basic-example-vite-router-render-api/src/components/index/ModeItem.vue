@@ -1,10 +1,10 @@
 <template>
   <div class="mode-item">
     <div class="mode-item-head">
-      <h2>{{ modeName }} -</h2>
+      <h2>{{ modeName }} - </h2>
       <i>{{ modeShort }}</i>
     </div>
-    <div class="mode-item-detail">{{ modeDetail }}</div>
+    <div class="mode-item-detail" v-html="modeDetail"></div>
     <div class="mode-item-act" v-if="active">
       <RouterLink :to="{ name: modeId }">
         <button class="btn-1">GoTo</button>
@@ -14,10 +14,10 @@
 </template>
 
 <script>
-import { defineComponent } from "vue";
+import { defineComponent } from 'vue'
 
 export default defineComponent({
-  name: "ModeItem",
+  name: 'ModeItem',
   props: {
     modeId: {
       type: String,
@@ -25,27 +25,27 @@ export default defineComponent({
     },
     modeName: {
       type: String,
-      default: "NONE",
+      default: "NONE"
     },
     modeShort: {
       type: String,
-      default: "",
+      default: ""
     },
     modeDetail: {
       type: String,
-      default: "",
+      default: ""
     },
     active: {
       type: Boolean,
-      default: false,
-    },
-  },
-});
+      default: false
+    }
+  }
+})
 </script>
 
 <style scoped>
 .mode-item {
-  border: 3px solid #2f5767;
+  border: 3px solid #2F5767;
   border-radius: 16px;
   overflow: hidden;
 }
@@ -56,15 +56,14 @@ export default defineComponent({
   gap: 10px;
   padding: 4px 8px;
   color: white;
-  background-color: #2f5767;
+  background-color: #2F5767;
 }
 
-.mode-item-head > h2 {
+.mode-item-head>h2 {
   font-size: 28px;
 }
 
-.mode-item-head > i {
-}
+.mode-item-head>i {}
 
 .mode-item-detail {
   padding: 8px;
@@ -74,8 +73,7 @@ export default defineComponent({
   padding: 8px;
 }
 
-.mode-item-act > button {
-}
+.mode-item-act>button {}
 
 @media only screen and (max-width: 512px) {
   .mode-item-head {

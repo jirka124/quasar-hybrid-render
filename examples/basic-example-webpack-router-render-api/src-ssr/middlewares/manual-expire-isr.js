@@ -3,6 +3,8 @@ import { ssrMiddleware } from "quasar/wrappers/index";
 import { promises as fs } from "fs";
 import { config } from "../../src-hr/config.cjs";
 
+let stateToggleApi1 = true;
+
 export default ssrMiddleware(({ app, resolve, render, serve }) => {
   app.post("/api/path-reinv", async (req, res, next) => {
     // some kind of AUTH...
@@ -20,5 +22,15 @@ export default ssrMiddleware(({ app, resolve, render, serve }) => {
     if (fileStats) await fs.unlink(fullFilepath);
 
     return res.status(200).json({ reqState: null, result: true });
+  });
+
+  app.post("/api/get-api-1-state", async (req, res, next) => {
+    // simulate a simple api
+    return res.status(200).json({ reqState: null, result: stateToggleApi1 });
+  });
+  app.post("/api/toggle-api-1-state", async (req, res, next) => {
+    // simulate a simple api
+    stateToggleApi1 = !stateToggleApi1;
+    return res.status(200).json({ reqState: null, result: stateToggleApi1 });
   });
 });

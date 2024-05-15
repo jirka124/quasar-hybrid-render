@@ -54,6 +54,15 @@ export default ssrMiddleware(({ app, resolve, render, serve }) => {
 
       next();
     } catch (err) {
+      // if is dev, serve an quasar error
+      if (process.env.DEV && !res.headersSent) {
+        serve.error({
+          err,
+          req,
+          res,
+        });
+      }
+
       // propagate error to error handler
       next(handleError(err));
     }

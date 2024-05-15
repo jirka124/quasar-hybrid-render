@@ -5,13 +5,16 @@
 
 const fs = require("fs").promises;
 const path = require("path");
+const { isEqual } = require("lodash");
 const {
   getNormPathname,
   getDefaultFilename,
   addExtension,
   ExpressError,
+  ConcurrentQueue,
 } = require("./utils.cjs");
 const { config } = require("./config.cjs");
+const { runtime } = require("./runtime.cjs");
 
 class Render {
   constructor({ SSRContext, middleParams }) {
@@ -21,7 +24,9 @@ class Render {
     this._filePath = null;
     this._fileName = null;
     this._fullFilePath = null;
-    this._renderedHTML = null;
+    this._uniquePageId = null;
+    this._renderedPage = null;
+    this._renderedError = null;
     this._renderRequired = null;
     this._hybridConf = config();
   }
@@ -45,21 +50,7 @@ class Render {
   }
 
   async run() {
-    if (this.preRun) await this.preRun();
-
-    if (this.prePrepare) await this.prePrepare();
-    if (this.prepare) await this.prepare();
-    if (this.postPrepare) await this.postPrepare();
-
-    if (this.preRenderHTML) await this.preRenderHTML();
-    if (this.renderHTML) await this.renderHTML();
-    if (this.postRenderHTML) await this.postRenderHTML();
-
-    if (this.preServeHTML) await this.preServeHTML();
-    if (this.serveHTML) await this.serveHTML();
-    if (this.postServeHTML) await this.postServeHTML();
-
-    if (this.postRun) await this.postRun();
+    // entry point of renderer
   }
 
   async prepare() {
@@ -68,27 +59,7 @@ class Render {
     await this.resolveFilename(); // set a name of final file
     await this.resolveFullFilepath(); // combine file's path and name and make absolute
     await this.resolveUrl(); // set request's url attr to a defined one or default received
-    await this.resolveRenderRequired(); // say if render is required or not for HTML
-  }
-
-  async renderHTML() {
-    // render page or read a page file
-    if (this._renderRequired) await this.renderPage();
-    else await this.readPage();
-  }
-
-  async serveHTML() {
-    if (this._renderedHTML === null) {
-      throw new ExpressError("HYBRID_EXT_RENDERED_HTML_IS_NULL", 404, {
-        stack: {
-          method: "serveHTML",
-          reason: "Cannot serve null as html response to user.",
-        },
-      });
-    } else {
-      this.res.setHeader("Content-Type", "text/html");
-      this.res.send(this._renderedHTML);
-    }
+    await this.resolveUniquePageId(); // resolves a unique id of requested page
   }
 
   resolvePathname() {
@@ -123,6 +94,11 @@ class Render {
     if (this.hr.ownUrl) this.req.url = this.hr.ownUrl;
     else this.req.url = this._normPath;
   }
+  resolveUniquePageId() {
+    // compose or get unique identifier of page
+    if (this.hr.pageId) this._uniquePageId = this.hr.pageId;
+    else this._uniquePageId = `${this._normPath}_|_${this._fullFilePath}`;
+  }
   resolveRenderRequired() {
     this._renderRequired = true;
   }
@@ -147,44 +123,79 @@ class Render {
       });
   }
 
+  async deleteFile(filePath) {
+    try {
+      await fs.unlink(filePath);
+    } catch (e) {
+      // throw error if it's not file doesnt exist
+      if (e.code !== "ENOENT") throw e;
+    }
+  }
+
   async readPage() {
-    this._renderedHTML = await this.readFile(this._fullFilePath);
+    this._renderedPage = await this.readFile(this._fullFilePath);
   }
 
   writePage() {
-    return this.writeFile(this._fullFilePath, this._renderedHTML);
+    return this.writeFile(this._fullFilePath, this._renderedPage);
+  }
+
+  deletePage() {
+    return this.deleteFile(this._fullFilePath);
+  }
+
+  async servePage() {
+    // throw error if trying to serve no content
+    if (this._renderedPage === null) {
+      throw new ExpressError("HYBRID_EXT_RENDERED_PAGE_IS_NULL", 404, {
+        stack: {
+          method: "serveHTML",
+          reason: "Cannot serve null as html response to user.",
+        },
+      });
+    }
+
+    // serve html in case res not yet sent
+    if (!this.res.headersSent) {
+      this.res.setHeader("Content-Type", "text/html");
+      this.res.send(this._renderedPage);
+      this.res.end();
+    }
   }
 
   async renderPage() {
     try {
       // use Quasar's method to render page with a given SSRContext
-      this._renderedHTML = await this._middleParams.render(this._SSRContext);
+      this._renderedPage = await this._middleParams.render(this._SSRContext);
     } catch (err) {
       // catch and serve redirects, no match, errors...
       if (err.url) {
         if (err.code) return this.res.redirect(err.code, err.url);
         return this.res.redirect(err.url);
       } else if (err.code === 404)
-        throw new ExpressError("HYBRID_EXT_PAGE_NOT_FOUND", 404, {
-          stack: {
-            method: "renderPage",
-            reason: "Unable to find the requested page.",
-          },
-        });
-      else if (process.env.DEV)
-        return this._middleParams.serve.error({
-          err,
-          req: this.req,
-          res: this.res,
-        });
+        this._renderedError = new ExpressError(
+          "HYBRID_EXT_PAGE_NOT_FOUND",
+          404,
+          {
+            stack: {
+              method: "renderPage",
+              reason: "Unable to find the requested page.",
+            },
+          }
+        );
+      else if (process.env.DEV) this._renderedError = err;
       else {
-        throw new ExpressError("HYBRID_EXT_UNEXPECTED_RENDER_ERR", 500, {
-          stack: {
-            method: "renderPage",
-            reason: "Quasar page render failed with unknown error.",
-            errStack: err.stack,
-          },
-        });
+        this._renderedError = new ExpressError(
+          "HYBRID_EXT_UNEXPECTED_RENDER_ERR",
+          500,
+          {
+            stack: {
+              method: "renderPage",
+              reason: "Quasar page render failed with unknown error.",
+              errStack: err.stack,
+            },
+          }
+        );
       }
     }
   }
@@ -197,13 +208,30 @@ class RenderCSR extends Render {
     super({ SSRContext, middleParams });
   }
 
+  async run() {
+    await this.prepare();
+
+    await this.resolveRenderRequired();
+
+    await this.readPage();
+
+    // error occured while rendering page
+    if (this._renderedError) throw this._renderedError;
+
+    await this.servePage();
+  }
+
   prepare() {
-    // make sure that CSR entry is simply re-used
-    this._renderRequired = false;
+    // entry file is always SPA entry file
     this._fullFilePath = this._middleParams.resolve.root(
       this.srcDir,
       "csr/index.html"
     );
+  }
+
+  async resolveRenderRequired() {
+    // make sure that CSR entry is simply re-used
+    this._renderRequired = false;
   }
 }
 
@@ -214,22 +242,36 @@ class RenderSSG extends Render {
     super({ SSRContext, middleParams });
   }
 
+  async run() {
+    try {
+      await this.prepare();
+
+      await this.resolveRenderRequired();
+
+      if (this._renderRequired) await this.renderPage();
+      else await this.readPage();
+
+      // error occured while rendering page
+      if (this._renderedError) throw this._renderedError;
+
+      // save HTML to filesystem
+      await this.writePage();
+
+      await this.servePage();
+    } catch (e) {
+      // delete cached page if exists (so user gets error for next request)
+      this.deletePage();
+
+      throw e;
+    }
+  }
+
   async resolveRenderRequired() {
     // check if page file exists
     const fileStats = await fs.stat(this._fullFilePath).catch((e) => null);
 
     // render of SSG is required only if file doesn't exist yet
     this._renderRequired = !fileStats;
-  }
-
-  async preServeHTML() {
-    // save HTML to filesystem
-    await this.writePage();
-  }
-
-  async serveHTML() {
-    // server HTML to user
-    await super.serveHTML();
   }
 }
 
@@ -238,6 +280,30 @@ class RenderISR extends Render {
 
   constructor({ SSRContext, middleParams }) {
     super({ SSRContext, middleParams });
+  }
+
+  async run() {
+    try {
+      await this.prepare();
+
+      await this.resolveRenderRequired();
+
+      if (this._renderRequired) await this.renderPage();
+      else await this.readPage();
+
+      // error occured while rendering page
+      if (this._renderedError) throw this._renderedError;
+
+      await this.servePage();
+
+      // save HTML to filesystem
+      if (this._renderRequired) await this.writePage();
+    } catch (e) {
+      // delete cached page if exists (so user gets error for next request)
+      this.deletePage();
+
+      throw e;
+    }
   }
 
   async resolveRenderRequired() {
@@ -249,19 +315,174 @@ class RenderISR extends Render {
     if (fileStats && this.route.ttl !== null && this.route.ttl !== undefined) {
       // set render required if ttl expired, (undefined | null) means never expire
       const ttl = Number(this.route.ttl) || 0;
-      if ((new Date() - new Date(fileStats.mtime)) / 1000 > ttl)
+      if ((new Date() - fileStats.mtimeMs) / 1000 > ttl)
         this._renderRequired = true;
     }
   }
+}
 
-  async serveHTML() {
-    // server HTML to user
-    await super.serveHTML();
+class RenderSWR extends Render {
+  /* first client is served, then HTML gets saved */
+
+  constructor({ SSRContext, middleParams }) {
+    super({ SSRContext, middleParams });
+    this._renderedError = null;
   }
-  async postServeHTML() {
-    // save HTML to filesystem
-    await this.writePage();
+
+  async run() {
+    try {
+      await this.prepare();
+
+      // first pass only check if page file exists
+      await this.resolveRenderRequired(1);
+
+      let servedFirstPass = true;
+      if (!this._renderRequired) {
+        // already rendered, read & serve
+        await this.readPage();
+        await this.servePage();
+      } else servedFirstPass = false;
+
+      // second pass check if isnt expired ttl
+      await this.resolveRenderRequired(2);
+
+      // run API stuff only if is renderRequired by expire/not exists
+      const isApiReinvRequired = this._renderRequired;
+      if (isApiReinvRequired) {
+        // check if api response up-to-date
+        await this.startApiProcess();
+
+        // if api expired, rerender, if not, change modified time to now and read from cache
+        if (this._renderRequired) await this.renderPage();
+        else {
+          // change the modify (also access) time of file in case api is up-to-date
+          await fs.utimes(this._fullFilePath, new Date(), new Date());
+          await this.readPage();
+        }
+
+        // update API endpoints of route
+        await this.endApiProcess();
+      }
+
+      if (this._renderedError) {
+        // error and not served from cache, throw rendered error
+        throw this._renderedError;
+      }
+
+      // no error and not served from cache, serve new rendered page
+      if (!servedFirstPass) await this.servePage();
+
+      // save HTML to filesystem
+      if (this._renderRequired) await this.writePage();
+    } catch (e) {
+      // delete cached page if exists (so user gets error for next request)
+      this.deletePage();
+
+      throw e;
+    }
+  }
+
+  async resolveRenderRequired(pass) {
+    // check if page file exists
+    const fileStats = await fs.stat(this._fullFilePath).catch((e) => null);
+
+    // render of SWR is needed if doesn't exist yet, or is expired
+    this._renderRequired = !fileStats;
+
+    if (pass === 2) {
+      if (
+        fileStats &&
+        this.route.ttl !== null &&
+        this.route.ttl !== undefined
+      ) {
+        // set render required if ttl expired, (undefined | null) means never expire
+        const ttl = Number(this.route.ttl) || 0;
+        if ((new Date() - fileStats.mtimeMs) / 1000 > ttl)
+          this._renderRequired = true;
+      }
+    }
+  }
+
+  async startApiProcess() {
+    // get copy of swr hints for current page
+    const swrHintGroup = runtime.swrHints
+      .getHintGroup(this._uniquePageId)
+      .useHintGroup();
+    const hintObj = swrHintGroup.hintGroup._hintObj;
+
+    // pass to SSRContext for use in rendered app
+    this.hr.swrHintGroup = swrHintGroup;
+
+    // get list of hints and sort them in order they were run
+    const hints = Object.values(hintObj).sort((a, b) => a._order - b._order);
+
+    // always re-render in case of empty hintObj
+    if (hints.length === 0) return (this._renderRequired = true);
+
+    // run api hint processing
+    const apiResults = await this.runApiHintProcesss(hints);
+
+    // render needed if api hints changed or required by previous checks
+    this._renderRequired = apiResults.some((r) => !r);
+  }
+
+  async runApiHintProcesss(hints) {
+    // get configured queue options
+    const CONCURRENT_GENS = +this._hybridConf.SWR.queueConcurrence || 3;
+    const COOLING_TIMEOUT = +this._hybridConf.SWR.queueCooling || 150;
+
+    // make list of callbacks for api hint validation
+    const calls = hints.map((hint) => {
+      return async () => {
+        // mark all endpoints as unused, to find out which are still in use
+        hint.setUsed(false);
+
+        // handle the outcome of api endpoint
+        let newResult, oldResult;
+        try {
+          newResult = await hint._func();
+        } catch (e) {
+          newResult = e;
+        }
+        try {
+          oldResult = await hint._result;
+        } catch (e) {
+          oldResult = e;
+        }
+
+        // if any results doesnt match, api is not up-to-date
+        const areEqual = isEqual(oldResult, newResult);
+        if (!areEqual) hint.setResult(newResult);
+
+        return areEqual;
+      };
+    });
+
+    // create and run parallel queue
+    const queue = new ConcurrentQueue(
+      { concurrentNumber: CONCURRENT_GENS, coolingTimeout: COOLING_TIMEOUT },
+      calls
+    );
+    return await queue.run();
+  }
+
+  async endApiProcess() {
+    // skip if have not been re-rendered
+    if (!this._renderRequired) return;
+
+    const hintGroup = this.hr.swrHintGroup.hintGroup;
+    const hints = Object.entries(hintGroup._hintObj);
+
+    // delete all unused swr hints
+    for (let i = 0, len = hints.length; i < len; i++) {
+      const [name, hint] = hints[i];
+
+      if (!hint._used) delete hintGroup._hintObj[name];
+    }
+
+    // set final hintGroup back to a runtime
+    runtime.swrHints.setHintGroup(this._uniquePageId, hintGroup);
   }
 }
 
-module.exports = { Render, RenderCSR, RenderSSG, RenderISR };
+module.exports = { Render, RenderCSR, RenderSSG, RenderISR, RenderSWR };

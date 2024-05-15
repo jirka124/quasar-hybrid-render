@@ -5,7 +5,12 @@
 
 import { ssrMiddleware } from "quasar/wrappers";
 
-import { RenderCSR, RenderSSG, RenderISR } from "../../src-hr/Render.cjs";
+import {
+  RenderCSR,
+  RenderSSG,
+  RenderISR,
+  RenderSWR,
+} from "../../src-hr/Render.cjs";
 import { handleError } from "../../src-hr/utils.cjs";
 import { config } from "../../src-hr/config.cjs";
 
@@ -25,6 +30,8 @@ export default ssrMiddleware(({ app, resolve, render, serve }) => {
         return next();
       if (req.hybridRender.route.type === "isr" && hybridConf.ISR.actAsSSR)
         return next();
+      if (req.hybridRender.route.type === "swr" && hybridConf.ISR.actAsSSR)
+        return next();
 
       const hr = req.hybridRender;
       const route = hr.route;
@@ -38,14 +45,24 @@ export default ssrMiddleware(({ app, resolve, render, serve }) => {
       };
 
       // choose appropriate renderer and run it to serve request
-      if (hr.renderer) renderer = renderer;
+      if (hr.renderer) renderer = hr.renderer;
       else if (route.type === "csr") renderer = new RenderCSR(renderOptions);
       else if (route.type === "ssg") renderer = new RenderSSG(renderOptions);
       else if (route.type === "isr") renderer = new RenderISR(renderOptions);
+      else if (route.type === "swr") renderer = new RenderSWR(renderOptions);
 
       if (!renderer) next();
       else await renderer.run();
     } catch (err) {
+      // if is dev, serve an quasar error
+      if (process.env.DEV && !res.headersSent) {
+        serve.error({
+          err,
+          req,
+          res,
+        });
+      }
+
       // propagate error to error handler
       next(handleError(err));
     }

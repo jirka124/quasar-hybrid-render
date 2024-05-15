@@ -4,7 +4,7 @@
       <h2>{{ modeName }} - </h2>
       <i>{{ modeShort }}</i>
     </div>
-    <div class="mode-item-detail">{{ modeDetail }}</div>
+    <div class="mode-item-detail" v-html="modeDetail"></div>
     <div class="mode-item-act" v-if="active">
       <RouterLink :to="{ name: modeId }">
         <button class="btn-1">GoTo</button>

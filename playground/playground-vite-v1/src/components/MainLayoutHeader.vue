@@ -13,6 +13,9 @@
       <RouterLink :to="{ name: 'isr' }">
         <p class="mlhn-item">ISR</p>
       </RouterLink>
+      <RouterLink :to="{ name: 'swr' }">
+        <p class="mlhn-item">SWR</p>
+      </RouterLink>
     </nav>
     <div id="mlh-banner" @click="$router.push({ name: 'index' })">
       <div id="mlhb-cont">

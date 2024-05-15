@@ -2,7 +2,7 @@
 
 # Quasar Framework: Hybrid Rendering Extension
 
-> Manage SSR, CSR, SSG, ISR usage on your pages, all with one extension using one codebase.
+> Manage SSR, CSR, SSG, ISR, SWR usage on your pages, all with one extension using one codebase.
 
 :warning: This extension is built on top of built-in SSR mode and has no effect unless used with SSR mode. [See first](https://quasar.dev/quasar-cli-vite/developing-ssr/preparation)
 
@@ -11,7 +11,7 @@
 ## Extension parts
 
 Extension is composed of two main parts, "Router API and Render API". These together allows for a simple plug-and-play, all you need to do is defined route rules inside of config file (see configuration) and extension will take care of the rest.
-Using both Router API and Render API will allow you to use CSR / SSG / ISR by defining just a single rule.
+Using both Router API and Render API will allow you to use CSR / SSG / ISR / SWR by defining just a single rule.
 
 ### Router API into
 
@@ -87,7 +87,7 @@ quasar build -m ssr
 ### Basic usage
 
 :warning: **Only applicable if using both Router API and Render API!**
-Basic usage allows simple and fast usage of all build-in rendering methods (SSR, CSR, SSG, ISR). All one must know is Router API and it's options.
+Basic usage allows simple and fast usage of all build-in rendering methods (SSR, CSR, SSG, ISR, SWR). All one must know is Router API and it's options.
 
 You may use rules described in [Router API](#router-api) to define what page/s use/s what rendering technique. Easiest way to accomplish so, is using **config file** exposed as (**hr-src/config.cjs**) in your project.
 
@@ -101,7 +101,11 @@ const routeList = () => {
     "/admin**": { type: "csr" }, // the whole admin area will use CSR (SPA)
     "/admin/menu": { type: "ssg" }, // menu in admin area will use SSG (will override previous CSR rule as is more specific)
     "/product/*": { type: "isr", ttl: 30 * 60 }, // every product page will use ISR with expiration time of 30 minutes
+    "/product/corny": { type: "isr", ttl: null }, // product with id "corny" will use ISR with no expiration time, meaning it won't expire ever (is more specific)
     "/product/456": { type: "ssr" }, // product with id 456 will use SSR even though rest used ISR (is more specific)
+    "/blog/*": { type: "swr", ttl: 60 * 60 }, // every blog page will use SWR with expiration time of 1 hour, then api is queried
+    "/blog/name": { type: "swr", ttl: 0 }, // blog with id "name" will use SWR with immediate expire even though rest used SWR with 1 hour expire time (is more specific)
+    "/blog/32": { type: "swr", ttl: null }, // blog with id 32 will use SWR with no expiration time even though rest used SWR with 1 hour expire time (is more specific)
   };
 };
 ```
@@ -148,6 +152,9 @@ You may use following options to define route **rules**:
 { type: "ssg" } // route will be prerendered (if allowed) and then reused
 { type: "isr", ttl: 20 } // route will be saved on first request and will expire in 20 secs of render
 { type: "isr", ttl: null } // route will be saved on first request and will never expire (default if no ttl provided)
+{ type: "swr", ttl: 40 } // route will be saved on first request and will expire in 40 secs of render if API response changed (or not provided). Excluding first request, requests are served before render
+{ type: "swr", ttl: 0 } // route will be saved on first request and will expire immediately of render, API is check for every request. Excluding first request, requests are served before render
+{ type: "swr", ttl: null } // route will be saved on first request and will never expire, even if API response changes (default if no ttl provided)
 ```
 
 HINT: in reality, use may define any properties, these will be mapped into the **req.hybridRender.route** for your own usage. But these mentioned are all that are understood by Render API.
@@ -192,11 +199,12 @@ Function that returns object used to initialize Render API's configuration at ru
     autoAddExt: Boolean, // defaults to true (add extension to filename if doesnt have)
   },
   route: { // this is whats set by Router API if used
-    type: String ["ssr", "csr", "ssg", "isr"], // defaults to "ssr" (choose rendering type)
-    ?ttl: [Number, undefined, null], // some can have time-to-live in secs, or null/undefined for never expire (ISR only)
+    type: String ["ssr", "csr", "ssg", "isr", "swr"], // defaults to "ssr" (choose rendering type)
+    ?ttl: [Number, undefined, null], // some can have time-to-live in secs, or null/undefined for never expire (ISR/SWR only)
   },
   renderer: any Render compatible obj, // default not set (may set for custom rendering behaviour based on Renderer)
   matches: Route[], // internally filled by Router API (if used) with matched routes
+  pageId: any truthy value, // unique identifier of page, defaults to `${normalized url path}_|_${absolute file path}`
   filepath: String, // a path to save/get page, defaults to pathname of requested url (better set at runtime if needed)
   filename: String, // a filename of page to save/get, defaults to index.html (better set at runtime if needed)
   ownUrl: String, // url path that should be requested and rendered, defaults to pathname of requested url (better set at runtime if needed)
@@ -219,10 +227,57 @@ Function that returns object used as a main configuration of extension itself.
     ISR: {
       actAsSSR: false, // ISR will not act as SSR
     },
+    SWR: {
+      actAsSSR: false, // will not act as SSR
+      queueConcurrence: 3, // how many hints to resolve at a time
+      queueCooling: 150, // how many [ms] to wait between resolves
+    },
   }
 ```
 
 ## Advanced
+
+### Using SWR API hints
+
+When using SWR, only ttl auto expiration is available through route configuration. If you wish to only re-render page in case some API response changes (any data source), you may use **useSWRHint** composable. That allows to defined a function that will be used for fetching the data, this function will be internally executed every time there is reason for it.
+
+The composable is as follows:
+
+```javascript
+async function useSWRHint(name, ssrContext, func) {
+  // name... unique identifier of API hint (must be unique among other hintNames per page)
+  // ssrContext... ssrContext provided by Quasar / Vue (may be ommited if run inside of "setup", pass falsy value)
+  // func... function to be run in order to get API data
+}
+```
+
+And usage could be as follows:
+
+```javascript
+import { useSWRHint } from "/src-hr/useSWRHint.js";
+import { useSomeStore } from "@/stores/some"
+
+async preFetch({ store, ssrContext }) {
+  const holdsScopeInfo = 45;
+  const result = await useSWRHint("hint1", ssrContext, () => {
+    return new Promise((res, rej) => {
+      setTimeout(() => { res("RESULT_DATA " + holdsScopeInfo) }, 200);
+    })
+  });
+
+  let result2 = null;
+  try {
+    result2 = await useSWRHint("hint2", ssrContext, async () => {
+      return (await api.post("/get-api-1-state")).data;
+    })
+  } catch (e) {
+    console.error(e);
+  }
+
+  // work with result as needed
+  useSomeStore(store).someProperty = result2.result;
+},
+```
 
 ### Using Render API programmatically
 
@@ -278,8 +333,12 @@ class CustomRender extends Render {
 
 export default ssrMiddleware(({ app, resolve, render, serve }) => {
   app.get(resolve.urlPath("*"), async (req, res, next) => {
+    const renderOptions = {
+      SSRContext: { req, res },
+      middleParams: { resolve, render, serve },
+    };
     // use custom render class
-    req.hybridRender.renderer = new CustomRender();
+    req.hybridRender.renderer = new CustomRender(renderOptions);
     next();
   });
 });

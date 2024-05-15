@@ -13,6 +13,9 @@
       <RouterLink :to="{ name: 'isr' }">
         <p class="mlhn-item">ISR</p>
       </RouterLink>
+      <RouterLink :to="{ name: 'swr' }">
+        <p class="mlhn-item">SWR</p>
+      </RouterLink>
     </nav>
     <div id="mlh-banner" @click="$router.push({ name: 'index' })">
       <div id="mlhb-cont">
@@ -21,97 +24,36 @@
         <p>Extension</p>
       </div>
       <picture id="mlhb-universe">
-        <source
-          type="image/webp"
-          srcset="@/assets/universe-512.webp"
-          media="(max-width: 512px)"
-          width="512"
-          height="327"
-        />
-        <source
-          type="image/webp"
-          srcset="@/assets/universe-768.webp"
-          media="(max-width: 768px)"
-          width="768"
-          height="491"
-        />
-        <source
-          type="image/webp"
-          srcset="@/assets/universe-1252.webp"
-          width="1252"
-          height="800"
-        />
-        <source
-          type="image/jpeg"
-          srcset="@/assets/universe-512.jpg"
-          media="(max-width: 512px)"
-          width="512"
-          height="327"
-        />
-        <source
-          type="image/jpeg"
-          srcset="@/assets/universe-768.jpg"
-          media="(max-width: 768px)"
-          width="768"
-          height="491"
-        />
-        <source
-          type="image/jpeg"
-          srcset="@/assets/universe-1252.jpg"
-          width="1252"
-          height="800"
-        />
-        <img
-          src="@/assets/universe-1252.jpg"
-          alt="universe illustration"
-          width="1252"
-          height="800"
-        />
+        <source type="image/webp" srcset="@/assets/universe-512.webp" media="(max-width: 512px)" width="512"
+          height="327" />
+        <source type="image/webp" srcset="@/assets/universe-768.webp" media="(max-width: 768px)" width="768"
+          height="491" />
+        <source type="image/webp" srcset="@/assets/universe-1252.webp" width="1252" height="800" />
+        <source type="image/jpeg" srcset="@/assets/universe-512.jpg" media="(max-width: 512px)" width="512"
+          height="327" />
+        <source type="image/jpeg" srcset="@/assets/universe-768.jpg" media="(max-width: 768px)" width="768"
+          height="491" />
+        <source type="image/jpeg" srcset="@/assets/universe-1252.jpg" width="1252" height="800" />
+        <img src="@/assets/universe-1252.jpg" alt="universe illustration" width="1252" height="800" />
       </picture>
       <picture id="mlhb-icon">
-        <source
-          type="image/webp"
-          srcset="/icons/favicon-64x64.webp"
-          media="(max-width: 768px)"
-          width="64"
-          height="64"
-        />
-        <source
-          type="image/webp"
-          srcset="/icons/favicon-128x128.webp"
-          width="128"
-          height="128"
-        />
-        <source
-          type="image/png"
-          srcset="/icons/favicon-64x64.png"
-          media="(max-width: 768px)"
-          width="64"
-          height="64"
-        />
-        <source
-          type="image/png"
-          srcset="/icons/favicon-128x128.png"
-          width="128"
-          height="128"
-        />
-        <img
-          src="/icons/favicon-128x128.png"
-          alt="quasar icon"
-          width="128"
-          height="128"
-        />
+        <source type="image/webp" srcset="/icons/favicon-64x64.webp" media="(max-width: 768px)" width="64"
+          height="64" />
+        <source type="image/webp" srcset="/icons/favicon-128x128.webp" width="128" height="128" />
+        <source type="image/png" srcset="/icons/favicon-64x64.png" media="(max-width: 768px)" width="64" height="64" />
+        <source type="image/png" srcset="/icons/favicon-128x128.png" width="128" height="128" />
+        <img src="/icons/favicon-128x128.png" alt="quasar icon" width="128" height="128" />
       </picture>
     </div>
   </div>
 </template>
 
 <script>
-import { defineComponent } from "vue";
+import { defineComponent } from 'vue'
 
 export default defineComponent({
-  name: "MainLayoutHeader",
-});
+  name: 'MainLayoutHeader'
+})
 </script>
 
 <style scoped>
@@ -121,11 +63,7 @@ export default defineComponent({
   align-items: center;
   gap: 16px;
   padding-bottom: 64px;
-  background: linear-gradient(
-    180deg,
-    rgba(11, 12, 26, 1) 0% 0%,
-    rgba(48, 88, 104, 1) 100% 100%
-  );
+  background: linear-gradient(180deg, rgba(11, 12, 26, 1) 0% 0%, rgba(48, 88, 104, 1) 100% 100%);
 }
 
 #mlh-nav {
@@ -137,14 +75,14 @@ export default defineComponent({
   padding: 16px 8px;
 }
 
-#mlh-nav > a {
+#mlh-nav>a {
   text-decoration: none;
   color: white;
   transition: 0.2s all;
 }
 
-#mlh-nav > a:hover {
-  color: #bbdefb;
+#mlh-nav>a:hover {
+  color: #BBDEFB;
 }
 
 .mlhn-item {
@@ -173,17 +111,17 @@ export default defineComponent({
   gap: 8px;
 }
 
-#mlhb-cont > b {
+#mlhb-cont>b {
   font-size: 22px;
-  color: #bbdefb;
+  color: #BBDEFB;
 }
 
-#mlhb-cont > h1 {
+#mlhb-cont>h1 {
   font-size: 36px;
   color: white;
 }
 
-#mlhb-cont > p {
+#mlhb-cont>p {
   font-size: 22px;
   color: white;
 }
@@ -198,7 +136,7 @@ export default defineComponent({
   overflow: hidden;
 }
 
-#mlhb-universe > img {
+#mlhb-universe>img {
   width: 100%;
 }
 
@@ -211,7 +149,7 @@ export default defineComponent({
   transform: translate(-50%, 40%);
 }
 
-#mlhb-icon > img {
+#mlhb-icon>img {
   width: 100%;
 }
 
@@ -231,15 +169,15 @@ export default defineComponent({
     top: -16px;
   }
 
-  #mlhb-cont > b {
+  #mlhb-cont>b {
     font-size: 18px;
   }
 
-  #mlhb-cont > h1 {
+  #mlhb-cont>h1 {
     font-size: 28px;
   }
 
-  #mlhb-cont > p {
+  #mlhb-cont>p {
     font-size: 18px;
   }
 }

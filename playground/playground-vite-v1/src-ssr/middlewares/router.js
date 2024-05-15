@@ -10,6 +10,10 @@ export default ssrMiddleware(({ app, resolve, render, serve }) => {
         route: { type: "isr", ttl: 20 },
         filepath: "/custom-isr",
       });
+    } else if (req.url === "/swr") {
+      req.hybridRender.extendConfig({
+        route: { type: "swr", ttl: 20 },
+      });
     }
 
     next();

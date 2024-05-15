@@ -28,6 +28,11 @@ const routes = [
         name: "isr",
         component: () => import("pages/ISRPage.vue"),
       },
+      {
+        path: "swr",
+        name: "swr",
+        component: () => import("pages/SWRPage.vue"),
+      },
     ],
   },
 

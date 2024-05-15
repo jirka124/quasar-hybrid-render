@@ -26,6 +26,36 @@ const deepMerge = (...objectArr) => {
   return target;
 };
 
+// will perform deep copy on provided structure (primitive, promise, object, array), returning new "equivalent" structure
+const deepCopy = (structure) => {
+  // if supports copy method, then run & return that
+  if (structure && structure.copy && structure instanceof Function)
+    return structure.copy();
+
+  if (
+    structure &&
+    Object.prototype.toString.call(structure) === "[object Promise]"
+  )
+    return structure; // is a promise object, return as is
+
+  if (isNotNullObject(structure)) {
+    // is object, run deepCopy on each property and return final object
+    const newObj = {};
+    for (const key in structure) newObj[key] = deepCopy(structure[key]);
+    return newObj;
+  }
+
+  if (Array.isArray(structure)) {
+    // is array, run deepCopy on each of its elements
+    const newArr = [];
+    for (const val of structure) newArr.push(deepCopy(val));
+    return newArr;
+  }
+
+  // else is primitive or type unsupported for copy, return as is
+  return structure;
+};
+
 // joins current config with new config
 const extendConfig = (configObj, extendBy) => {
   deepMerge(configObj, extendBy);
@@ -73,13 +103,124 @@ const handleError = (err) => {
   return err;
 };
 
+class ConcurrentQueue {
+  _concurrentNumber;
+  _coolingTimeout;
+  _calls = [];
+
+  #enqueueActive = false;
+  #queuePromise = null;
+  #queueIndex = 0;
+  #enqueued = 0;
+  #enqueueTimeouts = [];
+  #queueResolves = [];
+
+  constructor(config, calls) {
+    this._concurrentNumber = Object.hasOwn(config, "concurrentNumber")
+      ? config.concurrentNumber
+      : 2;
+    this._coolingTimeout = Object.hasOwn(config, "coolingTimeout")
+      ? config.coolingTimeout
+      : 500;
+    this._calls = calls || [];
+  }
+
+  async run() {
+    // append order info to each call
+    this._calls = this._calls.map((call, i) => ({ call, order: i }));
+
+    // enqueue first batch
+    this.#enqueue();
+
+    // save and return a promise of run end
+    return new Promise((res, rej) => {
+      this.#queuePromise = { res, rej };
+    });
+  }
+
+  #deleteTimeout(timeout) {
+    // clear and delete defined timeout from queue
+    const index = this.#enqueueTimeouts.indexOf(timeout);
+
+    if (index > -1) {
+      clearTimeout(this.#enqueueTimeouts[index]);
+      this.#enqueueTimeouts.splice(index, 1);
+    }
+  }
+
+  #remainingCallCount() {
+    // returns the totoal number of calls that are to be enqueued
+    return this._calls.length - this.#queueIndex;
+  }
+
+  #enqueableCount() {
+    // returns the totoal number of calls that can be enqued to reach the limit
+    return (
+      this._concurrentNumber - (this.#enqueued + this.#enqueueTimeouts.length)
+    );
+  }
+
+  async #enqueue() {
+    // make sure method is access only by one thread at a time
+    if (this.#enqueueActive) return setTimeout(this.#enqueue, 0);
+    this.#enqueueActive = true;
+
+    const remainingCallCount = this.#remainingCallCount();
+    const enqueableCount = this.#enqueableCount();
+    const toQueueCount = Math.min(remainingCallCount, enqueableCount);
+
+    // finish if all calls made and done
+    if (remainingCallCount < 1 && this.#enqueued < 1)
+      return this.#finishQueue();
+
+    // enqueue allowed calls in parrallel
+    for (let i = 0; i < toQueueCount; i++) {
+      const call = this._calls[this.#queueIndex++];
+      this.#enqueued++;
+
+      call
+        .call()
+        .then((r) => {
+          this.#enqueued--;
+          const timeout = setTimeout(() => {
+            // delete timeout from queue
+            this.#deleteTimeout(timeout);
+
+            // perform new enqueuement
+            this.#enqueue();
+          }, this._coolingTimeout);
+          this.#enqueueTimeouts.push(timeout);
+          this.#queueResolves[call.order] = r;
+
+          // finish if all calls made and done
+          if (this.#remainingCallCount() < 1 && this.#enqueued < 1)
+            return this.#finishQueue();
+        })
+        .catch((e) => {
+          this.#enqueueActive = false;
+          this.#enqueueTimeouts.map((t) => this.#deleteTimeout(t));
+          this.#queuePromise.rej(e);
+        });
+    }
+
+    this.#enqueueActive = false;
+  }
+
+  #finishQueue() {
+    this.#enqueueTimeouts.map((t) => this.#deleteTimeout(t));
+    return this.#queuePromise.res(this.#queueResolves);
+  }
+}
+
 module.exports = {
   isNotNullObject,
   deepMerge,
+  deepCopy,
   extendConfig,
   getNormPathname,
   getDefaultFilename,
   addExtension,
   ExpressError,
   handleError,
+  ConcurrentQueue,
 };

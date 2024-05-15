@@ -26,23 +26,22 @@ import TimeCompare from "@/components/TimeCompare.vue"
 export default defineComponent({
   name: 'SWRPage',
   components: { ReloadNotify, TimeCompare, TimeNow },
-  async preFetch({ store, currentRoute, previousRoute, redirect, ssrContext, urlPath, publicPath }) {
+  async preFetch({ store, ssrContext }) {
     const houby = 45;
     const result = await useSWRHint("hint1", ssrContext, () => {
       return new Promise((res, rej) => {
-        setTimeout(() => { res("RESULT_DATA " + houby) }, 10000);
+        setTimeout(() => { res("RESULT_DATA " + houby) }, 200);
       })
     });
 
     let result2 = null;
     try {
-      result2 = await useSWRHint("hint4", ssrContext, async () => {
+      result2 = await useSWRHint("hint2", ssrContext, async () => {
         return (await api.post("/get-api-1-state")).data;
       })
     } catch (e) {
       console.error(e);
     }
-    console.log("RESULT 2: ", result2);
 
     useAppStore(store).pageSpecific = { apiState: result2.result };
   },
@@ -51,10 +50,10 @@ export default defineComponent({
       // TODO: this would only work with script setup not setup function
       const houby = 55;
 
-      useSWRHint("hint2", useSSRContext(), () => {
+      useSWRHint("hint3", useSSRContext(), () => {
         return "RESULT_DATA " + houby;
       })
-      const result = useSWRHint("hint3", null, () => {
+      useSWRHint("hint4", null, () => {
         return "RESULT_DATA " + (houby + 40)
       })
     }
