@@ -10,14 +10,14 @@
 
 ## Extension parts
 
-Extension is composed of two main parts, "Router API and Render API". These together allows for a simple plug-and-play, all you need to do is defined route rules inside of config file (see configuration) and extension will take care of the rest.
+Extension is composed of two main parts, "Router API and Render API". These together allows for a simple plug-and-play, all you need to do is define route rules inside of config file ([See Usage](#usage)) and extension will take care of the rest.
 Using both Router API and Render API will allow you to use CSR / SSG / ISR / SWR by defining just a single rule.
 
-### Router API into
+### Router API intro
 
 Allows for mapping of route properties to a given url pattern. At runtime Router API matches requested url with defined patterns and evaluates the best match, whose properties are then used by Render API.
 
-### Render API into
+### Render API intro
 
 Allows for using different rendering techniques based on input parameters given to it. At build time CSR entry file is generated and if applicable SSG pages are prerendered.
 At runtime requested technique is used for rendering the page and result is given to the user. API allows for overriding defaults and extending rendering by own rendering techniques.
@@ -89,7 +89,7 @@ quasar build -m ssr
 :warning: **Only applicable if using both Router API and Render API!**
 Basic usage allows simple and fast usage of all build-in rendering methods (SSR, CSR, SSG, ISR, SWR). All one must know is Router API and it's options.
 
-You may use rules described in [Router API](#router-api) to define what page/s use/s what rendering technique. Easiest way to accomplish so, is using **config file** exposed as (**hr-src/config.cjs**) in your project.
+You may use rules described in [Router API](#router-api) to define what page/s use/s what rendering technique. Easiest way to accomplish so, is using **config file** exposed as (**src-hr/config.cjs**) in your project.
 
 The example code that shows some basic mapping:
 
@@ -114,7 +114,7 @@ For more details on Router API, please see [Router API](#router-api). You will f
 
 ## Router API
 
-for **Router API** you may play with following (**hr-src/config.cjs**):
+for **Router API** you may play with following (**src-hr/config.cjs**):
 
 ```javascript
 const routeList = () => {
@@ -150,14 +150,16 @@ You may use following options to define route **rules**:
 { type: "ssr" } // default, not needed
 { type: "csr" } // route will operate as SPA using CSR
 { type: "ssg" } // route will be prerendered (if allowed) and then reused
+{ type: "ssg", list: [ "/path/to/render", "/2" ] } // defines list of routes to be prerendered (list is required for non-primitive rules using * or **)
 { type: "isr", ttl: 20 } // route will be saved on first request and will expire in 20 secs of render
+{ type: "isr", ttl: 0 } // route will be saved on first request and will expire immediately of render, API is checked for every request.
 { type: "isr", ttl: null } // route will be saved on first request and will never expire (default if no ttl provided)
 { type: "swr", ttl: 40 } // route will be saved on first request and will expire in 40 secs of render if API response changed (or not provided). Excluding first request, requests are served before render
-{ type: "swr", ttl: 0 } // route will be saved on first request and will expire immediately of render, API is check for every request. Excluding first request, requests are served before render
+{ type: "swr", ttl: 0 } // route will be saved on first request and will expire immediately of render, API is checked for every request. Excluding first request, requests are served before render
 { type: "swr", ttl: null } // route will be saved on first request and will never expire, even if API response changes (default if no ttl provided)
 ```
 
-HINT: in reality, use may define any properties, these will be mapped into the **req.hybridRender.route** for your own usage. But these mentioned are all that are understood by Render API.
+HINT: in reality, you may define any properties, these will be mapped into the **req.hybridRender.route** for your own usage. But these mentioned are all that are understood by Render API.
 
 ### Matching priority
 
@@ -175,7 +177,7 @@ All matching rules are used to allow inheritance, **but pattern with higher prio
 
 ## Render API
 
-for **Render API** you may play with following (**hr-src/config.cjs**):
+for **Render API** you may play with following (**src-hr/config.cjs**):
 
 ```javascript
 const init = () => {
@@ -226,6 +228,8 @@ Function that returns object used as a main configuration of extension itself.
     },
     ISR: {
       actAsSSR: false, // ISR will not act as SSR
+      queueConcurrence: 3, // how many hints to resolve at a time
+      queueCooling: 150, // how many [ms] to wait between resolves
     },
     SWR: {
       actAsSSR: false, // will not act as SSR
@@ -237,25 +241,49 @@ Function that returns object used as a main configuration of extension itself.
 
 ## Advanced
 
-### Using SWR API hints
+### Using SWR / ISR API hints
 
-When using SWR, only ttl auto expiration is available through route configuration. If you wish to only re-render page in case some API response changes (any data source), you may use **useSWRHint** composable. That allows to defined a function that will be used for fetching the data, this function will be internally executed every time there is reason for it.
+When using SWR or ISR, only ttl auto expiration is available through route configuration. If you wish to only re-render page in case some API response changes (any data source), you may use **useSWRHint** composable for SWR pages only, **useISRHint** composable for ISR pages only and **useHint** composable for both. Composables are exposed in (**src-hr/useHint.cjs**). These allows to defined a function that will be used for fetching the data, this function will be internally executed every time before re-render of page, so that page is not rendered when there are no changes to it. **In case hint is combined with ttl**, then api is considered up-to-date for the whole time defined by ttl. When ttl expires, api is queried and compared for any differences, in case there is a missmatch, re-render will take place, in other case page will be valid for another period defined by ttl.
+
+**Why to use API hints?**
+
+- Page render will only take place if hint result changes, meaning increase of performance
+- Hints are executed in a parallel queue, many hints can run at once (unless configured other), meaning increase of performance
+
+**When not to use API hints?**
+
+- Hints are stored in-memory, many hints / big hint results will result in high memory usage
+- Big hints may also lead to long compare times (lodash "isEqual" is used)
 
 The composable is as follows:
 
 ```javascript
-async function useSWRHint(name, ssrContext, func) {
+async function useISRHint(name, ssrContext, func, opts) ...
+async function useSWRHint(name, ssrContext, func, opts) ...
+async function useHint(name, ssrContext, func, opts) {
   // name... unique identifier of API hint (must be unique among other hintNames per page)
   // ssrContext... ssrContext provided by Quasar / Vue (may be ommited if run inside of "setup", pass falsy value)
   // func... function to be run in order to get API data
+  // options object of hint, see below...
+}
+```
+
+options
+
+```javascript
+{
+  // if hint is skiped by any of following, then "func" is run and returned only (no special action is taken)
+  onlySWR: Boolean, // [ default: false ], pass true to only use hint with SWR pages (or use useSWRHint)
+  onlyISR: Boolean, // [ default: false ], pass true to only use hint with ISR pages (or use useISRHint)
+  skip: Boolean, // [ default: false ], pass true to use hint, false to not use hint (usable for components used by many routes)
 }
 ```
 
 And usage could be as follows:
 
 ```javascript
-import { useSWRHint } from "/src-hr/useSWRHint.js";
-import { useSomeStore } from "@/stores/some"
+import { useHint } from "/src-hr/useHint.js";
+import { useSomeStore } from "/src/stores/some"
 
 async preFetch({ store, ssrContext }) {
   const holdsScopeInfo = 45;
@@ -295,10 +323,10 @@ req.hybridRender.extendConfig({
 
 ### SSG while using Render API only
 
-The only way to define routes that will be prerendered at build time **while not using Router API** is using a JSON file (**hr-src/ssg-routes.json**). This file should include an array of paths that should be prerendered.
+The only way to define routes that will be prerendered at build time **while not using Router API** is using a JSON file (**src-hr/ssg-routes.json**). This file should include an array of paths that should be prerendered.
 The paths defined in this file are joined with paths defined by Router API.
 
-The example of such file would be (**hr-src/ssg-routes.json**):
+The example of such file would be (**src-hr/ssg-routes.json**):
 
 ```javascript
 ["/static-route", "/static-route-2"];
@@ -322,10 +350,10 @@ If you know what you do, you may define the order yourself by simply using them 
 
 There is a reason for exposing most of extension scripts to user, in order to allow easy extendability and understanding many files are stored in user project itself.
 If you aint fully satisfied with how any of renderers work by default or just want to make your own renderer.
-There is a way to do so, you may create new class, extend any of renderer classes found in (**hr-src/Render.cjs**), make requested changes and set it's instance to a **req.hybridRender.renderer**.
+There is a way to do so, you may create new class, extend any of renderer classes found in (**src-hr/Render.cjs**), make requested changes and set it's instance to a **req.hybridRender.renderer**.
 
 ```javascript
-import { Render } from "./path/to/Render.cjs";
+import { Render } from "/src-hr/Render.cjs";
 
 class CustomRender extends Render {
   // override any of methods

@@ -30,6 +30,8 @@ const config = () => {
     },
     ISR: {
       actAsSSR: false, // will not act as SSR
+      queueConcurrence: 3, // how many hints to resolve at a time
+      queueCooling: 150, // how many [ms] to wait between resolves
     },
     SWR: {
       actAsSSR: false, // will not act as SSR

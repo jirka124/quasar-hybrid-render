@@ -26,8 +26,8 @@ class Render {
     this._fullFilePath = null;
     this._uniquePageId = null;
     this._renderedPage = null;
-    this._renderedError = null;
     this._renderRequired = null;
+    this._reRenderRequired = null;
     this._hybridConf = config();
   }
 
@@ -101,6 +101,7 @@ class Render {
   }
   resolveRenderRequired() {
     this._renderRequired = true;
+    this._reRenderRequired = false;
   }
 
   async readFile(filePath) {
@@ -173,263 +174,60 @@ class Render {
         if (err.code) return this.res.redirect(err.code, err.url);
         return this.res.redirect(err.url);
       } else if (err.code === 404)
-        this._renderedError = new ExpressError(
-          "HYBRID_EXT_PAGE_NOT_FOUND",
-          404,
-          {
-            stack: {
-              method: "renderPage",
-              reason: "Unable to find the requested page.",
-            },
-          }
-        );
-      else if (process.env.DEV) this._renderedError = err;
+        throw new ExpressError("HYBRID_EXT_PAGE_NOT_FOUND", 404, {
+          stack: {
+            method: "renderPage",
+            reason: "Unable to find the requested page.",
+          },
+        });
+      else if (process.env.DEV) throw err;
       else {
-        this._renderedError = new ExpressError(
-          "HYBRID_EXT_UNEXPECTED_RENDER_ERR",
-          500,
-          {
-            stack: {
-              method: "renderPage",
-              reason: "Quasar page render failed with unknown error.",
-              errStack: err.stack,
-            },
-          }
-        );
+        throw new ExpressError("HYBRID_EXT_UNEXPECTED_RENDER_ERR", 500, {
+          stack: {
+            method: "renderPage",
+            reason: "Quasar page render failed with unknown error.",
+            errStack: err.stack,
+          },
+        });
       }
     }
   }
 }
 
-class RenderCSR extends Render {
-  /* client is always served with prepared SPA index */
-
-  constructor({ SSRContext, middleParams }) {
-    super({ SSRContext, middleParams });
-  }
-
-  async run() {
-    await this.prepare();
-
-    await this.resolveRenderRequired();
-
-    await this.readPage();
-
-    // error occured while rendering page
-    if (this._renderedError) throw this._renderedError;
-
-    await this.servePage();
-  }
-
-  prepare() {
-    // entry file is always SPA entry file
-    this._fullFilePath = this._middleParams.resolve.root(
-      this.srcDir,
-      "csr/index.html"
-    );
-  }
-
-  async resolveRenderRequired() {
-    // make sure that CSR entry is simply re-used
-    this._renderRequired = false;
-  }
-}
-
-class RenderSSG extends Render {
-  /* first HTML gets saved, then client is served */
-
-  constructor({ SSRContext, middleParams }) {
-    super({ SSRContext, middleParams });
-  }
-
-  async run() {
-    try {
-      await this.prepare();
-
-      await this.resolveRenderRequired();
-
-      if (this._renderRequired) await this.renderPage();
-      else await this.readPage();
-
-      // error occured while rendering page
-      if (this._renderedError) throw this._renderedError;
-
-      // save HTML to filesystem
-      await this.writePage();
-
-      await this.servePage();
-    } catch (e) {
-      // delete cached page if exists (so user gets error for next request)
-      this.deletePage();
-
-      throw e;
-    }
-  }
-
-  async resolveRenderRequired() {
-    // check if page file exists
-    const fileStats = await fs.stat(this._fullFilePath).catch((e) => null);
-
-    // render of SSG is required only if file doesn't exist yet
-    this._renderRequired = !fileStats;
-  }
-}
-
-class RenderISR extends Render {
-  /* first client is served, then HTML gets saved */
-
-  constructor({ SSRContext, middleParams }) {
-    super({ SSRContext, middleParams });
-  }
-
-  async run() {
-    try {
-      await this.prepare();
-
-      await this.resolveRenderRequired();
-
-      if (this._renderRequired) await this.renderPage();
-      else await this.readPage();
-
-      // error occured while rendering page
-      if (this._renderedError) throw this._renderedError;
-
-      await this.servePage();
-
-      // save HTML to filesystem
-      if (this._renderRequired) await this.writePage();
-    } catch (e) {
-      // delete cached page if exists (so user gets error for next request)
-      this.deletePage();
-
-      throw e;
-    }
-  }
-
-  async resolveRenderRequired() {
-    // check if page file exists
-    const fileStats = await fs.stat(this._fullFilePath).catch((e) => null);
-
-    // render of ISR is needed if doesn't exist yet, or is expired
-    this._renderRequired = !fileStats;
-    if (fileStats && this.route.ttl !== null && this.route.ttl !== undefined) {
-      // set render required if ttl expired, (undefined | null) means never expire
-      const ttl = Number(this.route.ttl) || 0;
-      if ((new Date() - fileStats.mtimeMs) / 1000 > ttl)
-        this._renderRequired = true;
-    }
-  }
-}
-
-class RenderSWR extends Render {
-  /* first client is served, then HTML gets saved */
-
-  constructor({ SSRContext, middleParams }) {
-    super({ SSRContext, middleParams });
-    this._renderedError = null;
-  }
-
-  async run() {
-    try {
-      await this.prepare();
-
-      // first pass only check if page file exists
-      await this.resolveRenderRequired(1);
-
-      let servedFirstPass = true;
-      if (!this._renderRequired) {
-        // already rendered, read & serve
-        await this.readPage();
-        await this.servePage();
-      } else servedFirstPass = false;
-
-      // second pass check if isnt expired ttl
-      await this.resolveRenderRequired(2);
-
-      // run API stuff only if is renderRequired by expire/not exists
-      const isApiReinvRequired = this._renderRequired;
-      if (isApiReinvRequired) {
-        // check if api response up-to-date
-        await this.startApiProcess();
-
-        // if api expired, rerender, if not, change modified time to now and read from cache
-        if (this._renderRequired) await this.renderPage();
-        else {
-          // change the modify (also access) time of file in case api is up-to-date
-          await fs.utimes(this._fullFilePath, new Date(), new Date());
-          await this.readPage();
-        }
-
-        // update API endpoints of route
-        await this.endApiProcess();
-      }
-
-      if (this._renderedError) {
-        // error and not served from cache, throw rendered error
-        throw this._renderedError;
-      }
-
-      // no error and not served from cache, serve new rendered page
-      if (!servedFirstPass) await this.servePage();
-
-      // save HTML to filesystem
-      if (this._renderRequired) await this.writePage();
-    } catch (e) {
-      // delete cached page if exists (so user gets error for next request)
-      this.deletePage();
-
-      throw e;
-    }
-  }
-
-  async resolveRenderRequired(pass) {
-    // check if page file exists
-    const fileStats = await fs.stat(this._fullFilePath).catch((e) => null);
-
-    // render of SWR is needed if doesn't exist yet, or is expired
-    this._renderRequired = !fileStats;
-
-    if (pass === 2) {
-      if (
-        fileStats &&
-        this.route.ttl !== null &&
-        this.route.ttl !== undefined
-      ) {
-        // set render required if ttl expired, (undefined | null) means never expire
-        const ttl = Number(this.route.ttl) || 0;
-        if ((new Date() - fileStats.mtimeMs) / 1000 > ttl)
-          this._renderRequired = true;
-      }
-    }
-  }
-
+class RenderApiHints extends Render {
   async startApiProcess() {
-    // get copy of swr hints for current page
-    const swrHintGroup = runtime.swrHints
+    const apiHints =
+      this instanceof RenderISR ? runtime.isrHints : runtime.swrHints;
+
+    // get copy of api hints for current page
+    const apiHintGroup = apiHints
       .getHintGroup(this._uniquePageId)
       .useHintGroup();
-    const hintObj = swrHintGroup.hintGroup._hintObj;
+    const hintObj = apiHintGroup.hintGroup._hintObj;
 
     // pass to SSRContext for use in rendered app
-    this.hr.swrHintGroup = swrHintGroup;
+    this.hr.apiHintGroup = apiHintGroup;
 
     // get list of hints and sort them in order they were run
     const hints = Object.values(hintObj).sort((a, b) => a._order - b._order);
 
     // always re-render in case of empty hintObj
-    if (hints.length === 0) return (this._renderRequired = true);
+    if (hints.length === 0) return (this._reRenderRequired = true);
 
     // run api hint processing
     const apiResults = await this.runApiHintProcesss(hints);
 
     // render needed if api hints changed or required by previous checks
-    this._renderRequired = apiResults.some((r) => !r);
+    this._reRenderRequired = apiResults.some((r) => !r);
   }
 
   async runApiHintProcesss(hints) {
+    const queueOpts =
+      this instanceof RenderISR ? this._hybridConf.ISR : this._hybridConf.SWR;
+
     // get configured queue options
-    const CONCURRENT_GENS = +this._hybridConf.SWR.queueConcurrence || 3;
-    const COOLING_TIMEOUT = +this._hybridConf.SWR.queueCooling || 150;
+    const CONCURRENT_GENS = +queueOpts.queueConcurrence || 3;
+    const COOLING_TIMEOUT = +queueOpts.queueCooling || 150;
 
     // make list of callbacks for api hint validation
     const calls = hints.map((hint) => {
@@ -467,13 +265,16 @@ class RenderSWR extends Render {
   }
 
   async endApiProcess() {
-    // skip if have not been re-rendered
-    if (!this._renderRequired) return;
+    const apiHints =
+      this instanceof RenderISR ? runtime.isrHints : runtime.swrHints;
 
-    const hintGroup = this.hr.swrHintGroup.hintGroup;
+    // skip if have not been re-rendered
+    if (!this._reRenderRequired) return;
+
+    const hintGroup = this.hr.apiHintGroup.hintGroup;
     const hints = Object.entries(hintGroup._hintObj);
 
-    // delete all unused swr hints
+    // delete all unused api hints
     for (let i = 0, len = hints.length; i < len; i++) {
       const [name, hint] = hints[i];
 
@@ -481,7 +282,276 @@ class RenderSWR extends Render {
     }
 
     // set final hintGroup back to a runtime
-    runtime.swrHints.setHintGroup(this._uniquePageId, hintGroup);
+    apiHints.setHintGroup(this._uniquePageId, hintGroup);
+  }
+}
+
+class RenderCSR extends Render {
+  /* client is always served with prepared SPA index */
+
+  constructor({ SSRContext, middleParams }) {
+    super({ SSRContext, middleParams });
+  }
+
+  async run() {
+    await this.prepare();
+
+    await this.resolveRenderRequired();
+
+    await this.readPage();
+
+    await this.servePage();
+  }
+
+  prepare() {
+    // entry file is always SPA entry file
+    this._fullFilePath = this._middleParams.resolve.root(
+      this.srcDir,
+      "csr/index.html"
+    );
+  }
+
+  async resolveRenderRequired() {
+    // make sure that CSR entry is simply re-used
+    this._renderRequired = false;
+    this._reRenderRequired = false;
+  }
+}
+
+class RenderSSG extends Render {
+  /* first HTML gets saved, then client is served */
+
+  constructor({ SSRContext, middleParams }) {
+    super({ SSRContext, middleParams });
+  }
+
+  async run() {
+    try {
+      await this.prepare();
+
+      await this.resolveRenderRequired();
+
+      if (this._renderRequired) await this.renderPage();
+      else await this.readPage();
+
+      // save HTML to filesystem
+      await this.writePage();
+
+      await this.servePage();
+    } catch (e) {
+      // delete cached page if exists (so user gets error for next request)
+      this.deletePage();
+
+      throw e;
+    }
+  }
+
+  async resolveRenderRequired() {
+    // check if page file exists
+    const fileStats = await fs.stat(this._fullFilePath).catch((e) => null);
+
+    // render of SSG is required only if file doesn't exist yet
+    this._renderRequired = !fileStats;
+  }
+}
+
+class RenderISR extends RenderApiHints {
+  /* first client is served, then HTML gets saved */
+
+  constructor({ SSRContext, middleParams }) {
+    super({ SSRContext, middleParams });
+  }
+
+  async run() {
+    let pageLock, isLocksmith;
+    try {
+      await this.prepare();
+
+      // get or create lock for current "page" and perform lock
+      pageLock = runtime.pageLocks.getPageLock(this._uniquePageId);
+      isLocksmith = pageLock.lock();
+
+      /* HANDLE locksmith customer */
+      if (!isLocksmith) {
+        // wait for locksmith to read or render and share a page
+        const lockResult = await pageLock.subscribe();
+
+        // handle locksmith sending error
+        if (lockResult[0] instanceof Error) throw lockResult[0];
+
+        // if okay, first arg will be renderedPage
+        this._renderedPage = lockResult[0];
+
+        // then simply serve received page to user
+        return await this.servePage();
+      }
+
+      /* HANDLE locksmith */
+      await this.resolveRenderRequired();
+
+      // run API stuff only if is required render or reRender of page
+      const isApiReinvRequired = this._renderRequired || this._reRenderRequired;
+      if (isApiReinvRequired) {
+        // check if api response up-to-date
+        await this.startApiProcess();
+
+        // if api expired, rerender, if not, change modified time to now and read from cache
+        // also render if no file exists, even though api hints are present (manual delete of file)
+        if (this._renderRequired || this._reRenderRequired)
+          await this.renderPage();
+        else {
+          // change the modify (also access) time of file in case api is up-to-date
+          await fs.utimes(this._fullFilePath, new Date(), new Date());
+          await this.readPage();
+        }
+
+        // update API endpoints of route
+        await this.endApiProcess();
+      } else await this.readPage();
+
+      await this.servePage();
+
+      // locksmith must notify its customers with rendered page
+      pageLock.notifySubscribers(this._renderedPage);
+
+      // save HTML to filesystem
+      if (this._renderRequired || this._reRenderRequired)
+        await this.writePage();
+
+      // locksmith must release the lock when process finished
+      pageLock.unlock();
+    } catch (e) {
+      // if locksmith, propagate error to locksmith customers and unlock page
+      if (isLocksmith) {
+        pageLock.notifySubscribers(e);
+        pageLock.unlock();
+      }
+
+      // delete cached page if exists (so user gets error for next request)
+      this.deletePage();
+
+      throw e;
+    }
+  }
+
+  async resolveRenderRequired() {
+    // check if page file exists
+    const fileStats = await fs.stat(this._fullFilePath).catch((e) => null);
+
+    // render of ISR is needed if doesn't exist yet, or is expired
+    this._renderRequired = !fileStats;
+    if (fileStats && this.route.ttl !== null && this.route.ttl !== undefined) {
+      // set render required if ttl expired, (undefined | null) means never expire
+      const ttl = Number(this.route.ttl) || 0;
+      if ((new Date() - fileStats.mtimeMs) / 1000 > ttl)
+        this._reRenderRequired = true;
+    }
+  }
+}
+
+class RenderSWR extends RenderApiHints {
+  /* first client is served, then HTML gets saved */
+
+  async run() {
+    let pageLock, isLocksmith;
+    try {
+      await this.prepare();
+
+      // get or create lock for current "page" and perform lock
+      pageLock = runtime.pageLocks.getPageLock(this._uniquePageId);
+      isLocksmith = pageLock.lock();
+
+      /* HANDLE locksmith customer */
+      if (!isLocksmith) {
+        // wait for locksmith to read or render and share a page
+        const lockResult = await pageLock.subscribe();
+
+        // handle locksmith sending error
+        if (lockResult[0] instanceof Error) throw lockResult[0];
+
+        // if okay, first arg will be renderedPage
+        this._renderedPage = lockResult[0];
+
+        // then simply serve received page to user
+        return await this.servePage();
+      }
+
+      /* HANDLE locksmith */
+
+      // check if should render / reRender
+      await this.resolveRenderRequired();
+
+      let servedFirstPass = true;
+      if (!this._renderRequired) {
+        // already rendered, read & serve
+        await this.readPage();
+        await this.servePage();
+
+        // locksmith must notify its customers with rendered page
+        pageLock.notifySubscribers(this._renderedPage);
+      } else servedFirstPass = false;
+
+      // run API stuff only if is required render or reRender of page
+      const isApiReinvRequired = this._renderRequired || this._reRenderRequired;
+      if (isApiReinvRequired) {
+        // check if api response up-to-date
+        await this.startApiProcess();
+
+        // if api expired, rerender, if not, change modified time to now and read from cache
+        // also render if no file exists, even though api hints are present (manual delete of file)
+        if (this._renderRequired || this._reRenderRequired)
+          await this.renderPage();
+        else {
+          // change the modify (also access) time of file in case api is up-to-date
+          await fs.utimes(this._fullFilePath, new Date(), new Date());
+          await this.readPage();
+        }
+
+        // update API endpoints of route
+        await this.endApiProcess();
+      }
+
+      // no error and not served from cache, serve new rendered page
+      if (!servedFirstPass) {
+        await this.servePage();
+
+        // locksmith must notify its customers with rendered page
+        pageLock.notifySubscribers(this._renderedPage);
+      }
+
+      // save HTML to filesystem
+      if (this._renderRequired || this._reRenderRequired)
+        await this.writePage();
+
+      // locksmith must release the lock when process finished
+      pageLock.unlock();
+    } catch (e) {
+      // if locksmith, propagate error to locksmith customers and unlock page
+      if (isLocksmith) {
+        pageLock.notifySubscribers(e);
+        pageLock.unlock();
+      }
+
+      // delete cached page if exists (so user gets error for next request)
+      this.deletePage();
+
+      throw e;
+    }
+  }
+
+  async resolveRenderRequired() {
+    // check if page file exists
+    const fileStats = await fs.stat(this._fullFilePath).catch((e) => null);
+
+    // render of SWR is needed if doesn't exist yet, or is expired
+    this._renderRequired = !fileStats;
+
+    if (fileStats && this.route.ttl !== null && this.route.ttl !== undefined) {
+      // set render required if ttl expired, (undefined | null) means never expire
+      const ttl = Number(this.route.ttl) || 0;
+      if ((new Date() - fileStats.mtimeMs) / 1000 > ttl)
+        this._reRenderRequired = true;
+    }
   }
 }
 

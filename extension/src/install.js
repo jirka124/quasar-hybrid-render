@@ -69,5 +69,7 @@ module.exports = async function (api, ctx) {
       });
     } else console.log(`☑ Asset "${asset.out}" up to date, skipping...`);
   }
+  console.log();
+  console.log();
   api.onExitLog(colors.cyan(`Installation of ${api.extId} done.`));
 };
