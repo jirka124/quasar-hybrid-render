@@ -30,7 +30,7 @@
     "eslint-plugin-vue": "^9.0.0",
     "postcss": "^8.4.14",
     "prettier": "^2.5.1",
-    "quasar-app-extension-hybrid-render": "^0.0.6"
+    "quasar-app-extension-hybrid-render": "^0.0.7"
   },
   "engines": {
     "node": "^18 || ^16 || ^14.19",

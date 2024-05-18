@@ -8,7 +8,8 @@
     <TimeCompare subject="This page was rendered at" :time="renderTime" :timeNow="nowTime" />
     <TimeCompare subject="This page was mounted at" :time="mountTime" :timeNow="nowTime" />
     <TimeCompare subject="This means it will auto expire at" :time="expireTime" :timeNow="nowTime" />
-    <button class="btn-1" @click="reinvPage">Manual Expire API & reload</button>
+    <button class="btn-1" @click="reinvApi">Manual Expire API & reload</button>
+    <button class="btn-1" @click="reinvPage">Manual Expire Page & reload</button>
   </div>
 </template>
 
@@ -16,7 +17,7 @@
 import { defineComponent } from 'vue'
 import { mapStores } from "pinia"
 import { useAppStore } from "@/stores/app"
-import { useSWRHint } from "/src-hr/useSWRHint.js"
+import { useSWRHint } from "/src-hr/useHint.js"
 import { useSSRContext } from 'vue'
 import { api } from "@/boot/axios.js";
 import ReloadNotify from "@/components/ReloadNotify.vue"
@@ -83,11 +84,23 @@ export default defineComponent({
     incTimeNow() {
       this.nowTime = new Date();
     },
-    async reinvPage() {
+    async reinvApi() {
       let r;
       try {
         r = (
           await this.$api.post("/toggle-api-1-state")
+        ).data;
+        if (r.reqState !== null) alert(`ERR: ${r.reqState}`);
+        else location.reload();
+      } catch (error) {
+        console.error(error);
+      }
+    },
+    async reinvPage() {
+      let r;
+      try {
+        r = (
+          await this.$api.post("/path-reinv-2")
         ).data;
         if (r.reqState !== null) alert(`ERR: ${r.reqState}`);
         else location.reload();

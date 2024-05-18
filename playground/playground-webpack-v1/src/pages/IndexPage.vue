@@ -67,7 +67,7 @@ export default defineComponent({
         {
           modeId: "isr",
           modeName: "ISR",
-          modeShort: "Technique works as SSG but doesn't prerender, may expire to get new contents",
+          modeShort: "Technique works as SSG but doesn't prerender, may expire to get new contents, allows validation by API",
           modeDetail: `Every request to a web page will check if render is needed, if not cached version is reused (if any).
           <br/><br/>
           WORKFLOW:<br/>
@@ -76,14 +76,15 @@ export default defineComponent({
             <li>Server renders or reads page</li>
             <li>
               <ol style="margin-left: 16px; list-style-position: inside;">
-                <li>IF renders</li>
+                <li>IF TTL expired & API changed</li>
                 <li>Server renders page</li>
                 <li>Server responds with page</li>
                 <li>Server saves page</li>
               </ol>
               <ol style="margin-left: 16px; list-style-position: inside;">
-                <li>IF reads</li>
+                <li>ELSE</li>
                 <li>Server reads page</li>
+                <li>Server renew the TTL of cached file (if went through api validation)</li>
                 <li>Server responds with page</li>
               </ol>
             </li>

@@ -5,24 +5,33 @@
 
 const { deepCopy } = require("./utils.cjs");
 
-class SWRHints {
-  constructor() {
-    this._pageMap = new Map(); // mapping key:value of pageUniqueId:SWRHintGroup
+class APIHints {
+  constructor(MODE) {
+    this._MODE = MODE;
+    this._pageMap = new Map(); // mapping key:value of pageUniqueId:APIHintGroup
   }
 
   getHintGroup(pageUniqueId) {
-    return this._pageMap.get(pageUniqueId) || new SWRHintGroup();
+    return this._pageMap.get(pageUniqueId) || new APIHintGroup(this._MODE);
   }
   setHintGroup(pageUniqueId, hintGroup) {
+    if (hintGroup.isEmpty()) {
+      // no current api hint for page, ignore
+      if (this.getHintGroup(pageUniqueId).isEmpty()) return this._pageMap;
+
+      // currently has api hint, delete him
+      this._pageMap.delete(pageUniqueId);
+    }
+
+    // api hint is valid, so set as current
     return this._pageMap.set(pageUniqueId, hintGroup);
   }
 }
 
-const swrHints = new SWRHints();
-
-class SWRHintGroup {
-  constructor() {
-    this._hintObj = {}; // mapping key:value of hintUniqueName:SWRHint
+class APIHintGroup {
+  constructor(MODE) {
+    this._MODE = MODE;
+    this._hintObj = {}; // mapping key:value of hintUniqueName:APIHint
   }
 
   // returns its deep copy encapsulated in object used by runtime
@@ -33,8 +42,12 @@ class SWRHintGroup {
     };
   }
 
+  isEmpty() {
+    return Object.keys(this._hintObj).length < 1;
+  }
+
   copy() {
-    const newHintGroup = new SWRHintGroup();
+    const newHintGroup = new APIHintGroup(this._MODE);
 
     // iterate hint entries and save to new group as copy
     const entries = Object.entries(this._hintObj);
@@ -51,7 +64,7 @@ class SWRHintGroup {
     return this._hintObj[hintUniqueName];
   }
   createHint(hintUniqueName) {
-    const hint = new SWRHint();
+    const hint = new APIHint(this._MODE);
     this._hintObj[hintUniqueName] = hint;
     return hint;
   }
@@ -60,8 +73,9 @@ class SWRHintGroup {
   }
 }
 
-class SWRHint {
-  constructor() {
+class APIHint {
+  constructor(MODE) {
+    this._MODE = MODE;
     this._order = Infinity;
     this._used = null;
     this._func = null;
@@ -69,7 +83,7 @@ class SWRHint {
   }
 
   copy() {
-    const newHint = new SWRHint();
+    const newHint = new APIHint(this._MODE);
 
     // copy all properties as copies to newHint
     newHint._order = deepCopy(this._order);
@@ -98,6 +112,87 @@ class SWRHint {
   }
 }
 
-const runtime = { swrHints };
+class PageLocks {
+  constructor() {
+    this._pageMap = new Map(); // mapping key:value of pageUniqueId:PageLock
+  }
+
+  getPageLock(pageUniqueId) {
+    let lock = this._pageMap.get(pageUniqueId) || null;
+    if (lock === null) {
+      lock = new PageLock(pageUniqueId, this);
+      this._pageMap.set(pageUniqueId, lock);
+    }
+
+    return lock;
+  }
+  hasPageLock(pageUniqueId) {
+    return this._pageMap.has(pageUniqueId) || false;
+  }
+  delPageLock(pageUniqueId) {
+    return this._pageMap.delete(pageUniqueId);
+  }
+}
+class PageLock {
+  /*
+  Creator of the lock is referred as to "Locksmith".
+  Requests accessing the lock after are referred as to "Customers".
+  Locksmith takes the active role, processing required stuff and sharing results to its customers.
+  */
+
+  constructor(pageUniqueId, pageLocks) {
+    this._locked = false;
+    this._pageUniqueId = pageUniqueId;
+    this._pageLocks = pageLocks;
+
+    // init promise that will resolve on lock unlock
+    this._lockRes = null;
+    this._lockRej = null;
+    this._lockPromise = new Promise((res, rej) => {
+      this._lockRes = res;
+      this._lockRej = rej;
+    });
+  }
+
+  subscribe() {
+    // returns promise that resolves on lock unlock
+    return this._lockPromise;
+  }
+
+  notifySubscribers(...args) {
+    // resolves subscribers with passed args
+    this._lockRes(args);
+  }
+
+  lock() {
+    // locksmith will get true state
+    if (!this._locked) {
+      this._locked = true;
+      return true;
+    }
+
+    // while others will receive false state
+    return false;
+  }
+
+  unlock() {
+    // do not allow unlock in case its not locked
+    if (!this._locked) return false;
+
+    // deletes lock from list of all page locks
+    this._pageLocks.delPageLock(this._pageUniqueId);
+
+    // hint... lock must remain locked after deletion
+    // hint... so anyone having access to lock will not lock again
+
+    return true;
+  }
+}
+
+const swrHints = new APIHints("SWR");
+const isrHints = new APIHints("ISR");
+const pageLocks = new PageLocks();
+
+const runtime = { isrHints, swrHints, pageLocks };
 
 module.exports = { runtime };
