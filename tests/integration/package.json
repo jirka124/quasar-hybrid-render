@@ -1,0 +1,20 @@
+{
+  "name": "integration",
+  "version": "1.0.0",
+  "description": "integration test for Quasar Hybrid Render Extension",
+  "main": "index.mjs",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "test-playground-vite": "node index.mjs -b vite -t playground",
+    "test-playground-webpack": "node index.mjs -b webpack -t playground",
+    "test-example-vite": "node index.mjs -b vite -t example",
+    "test-example-webpack": "node index.mjs -b webpack -t example"
+  },
+  "dependencies": {
+    "minimist": "^1.2.8",
+    "puppeteer": "^22.4.0"
+  },
+  "type": "module",
+  "author": "Jiří Žák",
+  "license": "MIT"
+}

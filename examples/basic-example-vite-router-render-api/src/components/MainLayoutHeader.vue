@@ -1,5 +1,6 @@
 <template>
   <div id="main-lay-head">
+    <div id="mlh-mount-state" :style="mountStyle" :title="isMounted ? 'TRUE' : 'FALSE'"></div>
     <nav id="mlh-nav">
       <RouterLink :to="{ name: 'ssr' }">
         <p class="mlhn-item">SSR</p>
@@ -52,18 +53,42 @@
 import { defineComponent } from 'vue'
 
 export default defineComponent({
-  name: 'MainLayoutHeader'
+  name: 'MainLayoutHeader',
+  data() {
+    return {
+      isMounted: false,
+    }
+  },
+  computed: {
+    mountStyle() {
+      return { backgroundColor: this.isMounted ? "green" : "red" };
+    }
+  },
+  mounted() {
+    this.isMounted = true;
+  }
 })
 </script>
 
 <style scoped>
 #main-lay-head {
+  position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 16px;
   padding-bottom: 64px;
   background: linear-gradient(180deg, rgba(11, 12, 26, 1) 0% 0%, rgba(48, 88, 104, 1) 100% 100%);
+}
+
+#mlh-mount-state {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: red;
 }
 
 #mlh-nav {

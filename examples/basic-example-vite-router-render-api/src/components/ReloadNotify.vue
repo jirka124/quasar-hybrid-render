@@ -6,34 +6,34 @@
 </template>
 
 <script>
-import { defineComponent } from "vue";
-import { mapStores } from "pinia";
-import { useAppStore } from "@/stores/app";
+import { defineComponent } from 'vue'
+import { mapStores } from "pinia"
+import { useAppStore } from "@/stores/app"
 
 export default defineComponent({
-  name: "ReloadNotify",
+  name: 'ReloadNotify',
   computed: {
     ...mapStores(useAppStore),
     shouldDisplay() {
       return !this.appStore.isUniversalRendered;
-    },
+    }
   },
   methods: {
     reloadPage() {
       window.location.reload();
-    },
-  },
-});
+    }
+  }
+})
 </script>
 
 <style scoped>
 .reload-notify {
   padding: 12px 24px;
   border-radius: 16px;
-  background-color: #ffb3a8;
+  background-color: #FFB3A8;
 }
 
-.reload-notify > p {
+.reload-notify>p {
   font-size: 20px;
   padding-bottom: 8px;
 }

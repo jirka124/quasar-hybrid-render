@@ -86,6 +86,9 @@ module.exports = configure(function (ctx) {
       },
       port: 5000,
       open: false, // opens browser window automatically
+      onListening: function (devServer) {
+        console.log("SERVER READY FOR REQUESTS");
+      },
     },
 
     // https://v2.quasar.dev/quasar-cli-webpack/quasar-config-js#Property%3A-framework

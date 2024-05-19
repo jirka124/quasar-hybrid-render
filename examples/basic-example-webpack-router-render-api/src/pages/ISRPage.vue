@@ -2,14 +2,15 @@
   <div id="m-isr">
     <ReloadNotify />
     <h2 id="m-isr-head">This page was rendered with ISR (20 sec. expire)</h2>
-    <b>current api state: {{ appStore.pageSpecific.apiState ? "TRUE" : "FALSE" }}</b>
+    <b>current api state: <span id="api-res">{{ appStore.pageSpecific.apiState ? "TRUE" : "FALSE" }}</span></b>
     <img id="m-isr-file" src="@/assets/file.svg" alt="file icon" width="256" height="256" loading="lazy">
     <TimeNow :timeNow="nowTime" />
-    <TimeCompare subject="This page was rendered at" :time="renderTime" :timeNow="nowTime" />
+    <TimeCompare subject="This page was rendered at" :time="renderTime" :timeNow="nowTime" id="render-elm"
+      :title="renderTime.toISOString()" />
     <TimeCompare subject="This page was mounted at" :time="mountTime" :timeNow="nowTime" />
     <TimeCompare subject="This means it will auto expire at" :time="expireTime" :timeNow="nowTime" />
-    <button class="btn-1" @click="reinvApi">Manual Expire API & reload</button>
-    <button class="btn-1" @click="reinvPage">Manual Expire Page & reload</button>
+    <button class="btn-1" id="reinv-api" @click="reinvApi">Manual Expire API & reload</button>
+    <button class="btn-1" id="reinv-page" @click="reinvPage">Manual Expire Page & reload</button>
   </div>
 </template>
 

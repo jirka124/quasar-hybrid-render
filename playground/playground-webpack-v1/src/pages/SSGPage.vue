@@ -4,7 +4,8 @@
     <h2 id="m-ssg-head">This page was rendered with SSG</h2>
     <img id="m-ssg-file" src="@/assets/file.svg" alt="file icon" width="256" height="256" loading="lazy">
     <TimeNow :timeNow="nowTime" />
-    <TimeCompare subject="This page was rendered at" :time="renderTime" :timeNow="nowTime" />
+    <TimeCompare subject="This page was rendered at" :time="renderTime" :timeNow="nowTime" id="render-elm"
+      :title="renderTime.toISOString()" />
     <TimeCompare subject="This page was mounted at" :time="mountTime" :timeNow="nowTime" />
   </div>
 </template>

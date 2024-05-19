@@ -1,6 +1,9 @@
 /* PROJECT DEFAULTS */
 * {
-  font-family: Oswald, "Helvetica Neue", sans-serif;
+  font-family:
+    Oswald,
+    'Helvetica Neue',
+    sans-serif;
   font-size: 16px;
   line-height: 1.6;
   box-sizing: border-box;
@@ -27,13 +30,13 @@ picture {
   padding: 4px 16px;
   border: none;
   border-radius: 6px;
-  background-color: #bbdefb;
-  box-shadow: 0px 2px 4px 0px rgba(100, 100, 100, 0.5);
+  background-color: #BBDEFB;
+  box-shadow:  0px 2px 4px 0px rgba(100, 100, 100, 0.5);
   transition: 0.2s all;
   cursor: pointer;
 }
 .btn-1:hover {
-  background-color: #8ec3ef;
+  background-color: #8EC3EF;
 }
 
 /* Define GFonts local */
@@ -42,6 +45,5 @@ picture {
   font-weight: 400;
   font-style: normal;
   font-display: swap;
-  src: local("Oswald"), url("/fonts/Oswald.woff2") format("woff2"),
-    url("/fonts/Oswald.woff") format("woff");
+  src: local("Oswald"), url("/fonts/Oswald.woff2") format("woff2"), url("/fonts/Oswald.woff") format("woff");
 }
