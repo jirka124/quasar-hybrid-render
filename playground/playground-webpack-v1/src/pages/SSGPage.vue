@@ -2,24 +2,40 @@
   <div id="m-ssg">
     <ReloadNotify />
     <h2 id="m-ssg-head">This page was rendered with SSG</h2>
-    <img id="m-ssg-file" src="@/assets/file.svg" alt="file icon" width="256" height="256" loading="lazy">
+    <img
+      id="m-ssg-file"
+      src="@/assets/file.svg"
+      alt="file icon"
+      width="256"
+      height="256"
+      loading="lazy"
+    />
     <TimeNow :timeNow="nowTime" />
-    <TimeCompare subject="This page was rendered at" :time="renderTime" :timeNow="nowTime" id="render-elm"
-      :title="renderTime.toISOString()" />
-    <TimeCompare subject="This page was mounted at" :time="mountTime" :timeNow="nowTime" />
+    <TimeCompare
+      subject="This page was rendered at"
+      :time="renderTime"
+      :timeNow="nowTime"
+      id="render-elm"
+      :title="renderTime.toISOString()"
+    />
+    <TimeCompare
+      subject="This page was mounted at"
+      :time="mountTime"
+      :timeNow="nowTime"
+    />
   </div>
 </template>
 
 <script>
-import { defineComponent } from 'vue'
-import { mapStores } from "pinia"
-import { useAppStore } from "@/stores/app"
-import ReloadNotify from "@/components/ReloadNotify.vue"
-import TimeNow from "@/components/TimeNow.vue"
-import TimeCompare from "@/components/TimeCompare.vue"
+import { defineComponent } from "vue";
+import { mapStores } from "pinia";
+import { useAppStore } from "@/stores/app";
+import ReloadNotify from "@/components/ReloadNotify.vue";
+import TimeNow from "@/components/TimeNow.vue";
+import TimeCompare from "@/components/TimeCompare.vue";
 
 export default defineComponent({
-  name: 'SSGPage',
+  name: "SSGPage",
   components: { ReloadNotify, TimeCompare, TimeNow },
   setup() {
     // SSR is server side renderd (set render time only in server side)
@@ -29,20 +45,20 @@ export default defineComponent({
     return {
       nowTime: null,
       mountTime: null,
-      nowTimeInterv: null
-    }
+      nowTimeInterv: null,
+    };
   },
   computed: {
     ...mapStores(useAppStore),
     renderTime() {
       // reuse server provided renderTime
-      return new Date(this.appStore.renderTime)
-    }
+      return new Date(this.appStore.renderTime);
+    },
   },
   methods: {
     incTimeNow() {
       this.nowTime = new Date();
-    }
+    },
   },
   mounted() {
     this.mountTime = new Date();
@@ -51,8 +67,8 @@ export default defineComponent({
   },
   beforeUnmount() {
     clearInterval(this.nowTimeInterv);
-  }
-})
+  },
+});
 </script>
 
 <style scoped>

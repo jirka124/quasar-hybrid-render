@@ -1,5 +1,5 @@
 {
-  "hybrid-render": {
+  "hybrid-render-cjs": {
     "apiSet": "routerRenderApi"
   }
 }

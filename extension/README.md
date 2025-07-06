@@ -4,6 +4,8 @@
 
 > Manage SSR, CSR, SSG, ISR, SWR usage on your pages, all with one extension using one codebase.
 
+:exclamation: This extension is built for Quasar running on ESM, if you happen use CJS in your project. Please upgrade or see [LEGACY VERSION](https://github.com/jirka124/quasar-hybrid-render/tree/main/extension-cjs)
+
 :warning: This extension is built on top of built-in SSR mode and has no effect unless used with SSR mode. [See first](https://quasar.dev/quasar-cli-vite/developing-ssr/preparation)
 
 [Installation](#installation) | [Uninstallation](#uninstallation) | [Compatibility](#compatibility) | [Usage](#usage) | [Router API](#router-api) | [Render API](#render-api) | [Advanced](#advanced)
@@ -58,13 +60,9 @@ Extension was tested with following versions (but may work with others too):
 
 | @quasar/app-vite | @quasar/app-webpack |
 | ---------------- | ------------------- |
-| ^1.3.0           | ^3.0.0              |
+| ^2.0.0           | ^4.0.0              |
 
-The following versions are being prepared:
-
-| @quasar/app-vite | @quasar/app-webpack |
-| ---------------- | ------------------- |
-| ^2.0.0-beta      | ^4.0.0-beta         |
+:exclamation: This extension is built for Quasar running on ESM, if you happen use CJS in your project. Please upgrade or see [LEGACY VERSION](https://github.com/jirka124/quasar-hybrid-render/tree/main/extension-cjs)
 
 ## Usage
 
@@ -89,7 +87,7 @@ quasar build -m ssr
 :warning: **Only applicable if using both Router API and Render API!**
 Basic usage allows simple and fast usage of all build-in rendering methods (SSR, CSR, SSG, ISR, SWR). All one must know is Router API and it's options.
 
-You may use rules described in [Router API](#router-api) to define what page/s use/s what rendering technique. Easiest way to accomplish so, is using **config file** exposed as (**src-hr/config.cjs**) in your project.
+You may use rules described in [Router API](#router-api) to define what page/s use/s what rendering technique. Easiest way to accomplish so, is using **config file** exposed as (**src-hr/config.js**) in your project.
 
 The example code that shows some basic mapping:
 
@@ -114,7 +112,7 @@ For more details on Router API, please see [Router API](#router-api). You will f
 
 ## Router API
 
-for **Router API** you may play with following (**src-hr/config.cjs**):
+for **Router API** you may play with following (**src-hr/config.js**):
 
 ```javascript
 const routeList = () => {
@@ -177,7 +175,7 @@ All matching rules are used to allow inheritance, **but pattern with higher prio
 
 ## Render API
 
-for **Render API** you may play with following (**src-hr/config.cjs**):
+for **Render API** you may play with following (**src-hr/config.js**):
 
 ```javascript
 const init = () => {
@@ -243,7 +241,7 @@ Function that returns object used as a main configuration of extension itself.
 
 ### Using SWR / ISR API hints
 
-When using SWR or ISR, only ttl auto expiration is available through route configuration. If you wish to only re-render page in case some API response changes (any data source), you may use **useSWRHint** composable for SWR pages only, **useISRHint** composable for ISR pages only and **useHint** composable for both. Composables are exposed in (**src-hr/useHint.cjs**). These allows to defined a function that will be used for fetching the data, this function will be internally executed every time before re-render of page, so that page is not rendered when there are no changes to it. **In case hint is combined with ttl**, then api is considered up-to-date for the whole time defined by ttl. When ttl expires, api is queried and compared for any differences, in case there is a missmatch, re-render will take place, in other case page will be valid for another period defined by ttl.
+When using SWR or ISR, only ttl auto expiration is available through route configuration. If you wish to only re-render page in case some API response changes (any data source), you may use **useSWRHint** composable for SWR pages only, **useISRHint** composable for ISR pages only and **useHint** composable for both. Composables are exposed in (**src-hr/useHint.js**). These allows to defined a function that will be used for fetching the data, this function will be internally executed every time before re-render of page, so that page is not rendered when there are no changes to it. **In case hint is combined with ttl**, then api is considered up-to-date for the whole time defined by ttl. When ttl expires, api is queried and compared for any differences, in case there is a missmatch, re-render will take place, in other case page will be valid for another period defined by ttl.
 
 **Why to use API hints?**
 
@@ -350,16 +348,16 @@ If you know what you do, you may define the order yourself by simply using them 
 
 There is a reason for exposing most of extension scripts to user, in order to allow easy extendability and understanding many files are stored in user project itself.
 If you aint fully satisfied with how any of renderers work by default or just want to make your own renderer.
-There is a way to do so, you may create new class, extend any of renderer classes found in (**src-hr/Render.cjs**), make requested changes and set it's instance to a **req.hybridRender.renderer**.
+There is a way to do so, you may create new class, extend any of renderer classes found in (**src-hr/Render.js**), make requested changes and set it's instance to a **req.hybridRender.renderer**.
 
 ```javascript
-import { Render } from "/src-hr/Render.cjs";
+import { Render } from "/src-hr/Render.js";
 
 class CustomRender extends Render {
   // override any of methods
 }
 
-export default ssrMiddleware(({ app, resolve, render, serve }) => {
+export default defineSsrMiddleware(({ app, resolve, render, serve }) => {
   app.get(resolve.urlPath("*"), async (req, res, next) => {
     const renderOptions = {
       SSRContext: { req, res },

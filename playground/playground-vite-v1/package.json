@@ -13,8 +13,8 @@
     "build": "quasar build",
     "dev-ssr": "quasar dev -m ssr",
     "build-ssr": "quasar build -m ssr",
-    "install-ext": "npm add --save-dev file://C:\\xampp\\htdocs\\PHPcodes\\quasar\\hybrid-render\\extension && quasar ext invoke hybrid-render",
-    "uninstall-ext": "quasar ext uninvoke hybrid-render"
+    "install-ext": "npm add --save-dev file:../../extension-cjs && quasar ext invoke hybrid-render-cjs",
+    "uninstall-ext": "quasar ext uninvoke hybrid-render-cjs"
   },
   "dependencies": {
     "@quasar/extras": "^1.16.4",
@@ -32,7 +32,7 @@
     "eslint-plugin-vue": "^9.0.0",
     "postcss": "^8.4.14",
     "prettier": "^2.5.1",
-    "quasar-app-extension-hybrid-render": "file:../../extension"
+    "quasar-app-extension-hybrid-render-cjs": "file:../../extension-cjs"
   },
   "engines": {
     "node": "^18 || ^16 || ^14.19",

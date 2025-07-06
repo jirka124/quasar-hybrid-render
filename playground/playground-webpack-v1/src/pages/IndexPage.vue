@@ -1,16 +1,23 @@
 <template>
   <div id="index">
-    <ModeItem v-for="mode in modes" :key="mode.modeId" :modeId="mode.modeId" :modeName="mode.modeName"
-      :modeShort="mode.modeShort" :modeDetail="mode.modeDetail" :active="mode.active" />
+    <ModeItem
+      v-for="mode in modes"
+      :key="mode.modeId"
+      :modeId="mode.modeId"
+      :modeName="mode.modeName"
+      :modeShort="mode.modeShort"
+      :modeDetail="mode.modeDetail"
+      :active="mode.active"
+    />
   </div>
 </template>
 
 <script>
-import { defineComponent } from 'vue'
+import { defineComponent } from "vue";
 import ModeItem from "@/components/index/ModeItem.vue";
 
 export default defineComponent({
-  name: 'IndexPage',
+  name: "IndexPage",
   components: { ModeItem },
   data() {
     return {
@@ -29,12 +36,13 @@ export default defineComponent({
             <li>Client views the new page</li>
           </ol>
           `,
-          active: true
+          active: true,
         },
         {
           modeId: "csr",
           modeName: "CSR",
-          modeShort: "Technique is using Quasar internals to render the SPA entry file",
+          modeShort:
+            "Technique is using Quasar internals to render the SPA entry file",
           modeDetail: `Every request to a web page will be returned just SPA entry generated at build time.
           <br/><br/>
           WORKFLOW:<br/>
@@ -46,7 +54,7 @@ export default defineComponent({
             <li>Client views the new page</li>
           </ol>
           `,
-          active: true
+          active: true,
         },
         {
           modeId: "ssg",
@@ -62,12 +70,13 @@ export default defineComponent({
             <li>Client views the new page</li>
           </ol>
           `,
-          active: true
+          active: true,
         },
         {
           modeId: "isr",
           modeName: "ISR",
-          modeShort: "Technique works as SSG but doesn't prerender, may expire to get new contents, allows validation by API",
+          modeShort:
+            "Technique works as SSG but doesn't prerender, may expire to get new contents, allows validation by API",
           modeDetail: `Every request to a web page will check if render is needed, if not cached version is reused (if any).
           <br/><br/>
           WORKFLOW:<br/>
@@ -91,12 +100,13 @@ export default defineComponent({
             <li>Client views the new page</li>
           </ol>
           `,
-          active: true
+          active: true,
         },
         {
           modeId: "swr",
           modeName: "SWR",
-          modeShort: "Technique works as ISR, but returns cached content and revalidates after user is served, allows validation by API",
+          modeShort:
+            "Technique works as ISR, but returns cached content and revalidates after user is served, allows validation by API",
           modeDetail: `Every request to a web page will get cached version and check if render is needed, if is then silently re-renders.
           <br/><br/>
           WORKFLOW:<br/>
@@ -119,12 +129,12 @@ export default defineComponent({
             </li>
           </ol>
           `,
-          active: true
-        }
-      ]
-    }
-  }
-})
+          active: true,
+        },
+      ],
+    };
+  },
+});
 </script>
 
 <style scoped>

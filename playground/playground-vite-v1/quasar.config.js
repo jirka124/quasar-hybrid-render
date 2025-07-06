@@ -94,7 +94,6 @@ module.exports = configure(function (ctx) {
       // https: true
       open: false, // DO NOT open browser window automatically
       port: 5000,
-      watchFiles: ["/node_modules/quasar-app-extension-hybrid-render/*"],
     },
 
     // https://v2.quasar.dev/quasar-cli-vite/quasar-config-js#framework

@@ -3,12 +3,12 @@
   You should not temper with this file, unless really needed.
 */
 
-import { ssrMiddleware } from "quasar/wrappers";
-import { routes } from "../../src-hr/config.cjs";
-import { handleError } from "../../src-hr/utils.cjs";
-import { getNormPathname } from "../../src-hr/utils.cjs";
+import { defineSsrMiddleware } from "#q-app/wrappers";
+import { routes } from "../../src-hr/config.js";
+import { handleError } from "../../src-hr/utils.js";
+import { getNormPathname } from "../../src-hr/utils.js";
 
-export default ssrMiddleware(({ app, resolve, render, serve }) => {
+export default defineSsrMiddleware(({ app, resolve, render, serve }) => {
   app.get(resolve.urlPath("*"), async (req, res, next) => {
     try {
       const hybridRoutes = routes();

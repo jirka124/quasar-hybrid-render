@@ -24,7 +24,7 @@ const config = () => {
     killSwitch: false, // set true to temporarly disable extension
     srcDir: "hybrid_render", // project relative path
     SSG: {
-      actAsSSR: false, // will not act as SSR
+      actAsSSR: false, // will act as SSR in DEV
       queueConcurrence: 2, // how many pages prerender at a time
       queueCooling: 600, // how many [ms] to wait between renders
     },

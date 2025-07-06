@@ -1,5 +1,66 @@
-const path = require("path");
-const { PrepareSPA, PrepareSSG } = require("./private/Prepare.cjs");
+import path from "path";
+import { pathToFileURL } from "url";
+import { PrepareSPA, PrepareSSG } from "./private/Prepare.js";
+
+/**
+ * Quasar App Extension index/runner script
+ * (runs on each dev/build)
+ *
+ * Docs: https://quasar.dev/app-extensions/development-guide/index-api
+ */
+export default async function (api) {
+  if (api.hasVite === true) api.compatibleWith("@quasar/app-vite", ">=2.0.0-0");
+  else api.compatibleWith("@quasar/app-webpack", ">=4.0.0-0");
+
+  const configPath = api.resolve.app(path.join("src-hr/config.js"));
+
+  const { config } = await import(pathToFileURL(configPath));
+
+  const hybridConf = config();
+
+  const usesRouterApi =
+    !hybridConf.killSwitch &&
+    ["routerRenderApi", "routerApi"].includes(api.prompts.apiSet);
+
+  const usesRenderApi =
+    !hybridConf.killSwitch &&
+    ["routerRenderApi", "renderApi"].includes(api.prompts.apiSet);
+
+  api.extendQuasarConf((quasarConf, api) => {
+    // manage runtime middlewares
+    manageMiddlewares({
+      middlewares: quasarConf.ssr.middlewares,
+      usesRouterApi,
+      usesRenderApi,
+    });
+
+    // manage ignore of HMR for pages in Vite builds
+    manageIgnoreHMR({ api, quasarConf, hybridConf });
+  });
+
+  // kill after middleware management if no render API (middles must run so they are removed appropriate)
+  if (!usesRenderApi) return;
+
+  api.afterDev(async (api, { quasarConf }) => {
+    if (quasarConf.ctx.modeName === "ssr") {
+      // prepare dev SPA client entry index file
+      await new PrepareSPA({ api, quasarConf, hybridConf }).run();
+
+      // prerender SSG routes
+      await new PrepareSSG({ api, quasarConf, hybridConf }).run();
+    }
+  });
+
+  api.afterBuild(async (api, { quasarConf }) => {
+    if (quasarConf.ctx.modeName === "ssr") {
+      // prepare prod SPA client entry index file
+      await new PrepareSPA({ api, quasarConf, hybridConf }).run();
+
+      // prerender SSG routes
+      await new PrepareSSG({ api, quasarConf, hybridConf }).run();
+    }
+  });
+}
 
 // adds/removes middlewares used based on requested feature set
 const manageMiddlewares = ({
@@ -80,71 +141,4 @@ const manageIgnoreHMR = ({ api, quasarConf, hybridConf }) => {
     else if (outDirIndex < 0)
       quasarConf.devServer.watch.ignored.push(outDirPath);
   }
-};
-
-/**
- * Quasar App Extension index/runner script
- * (runs on each dev/build)
- *
- * Docs: https://quasar.dev/app-extensions/development-guide/index-api
- */
-module.exports = async function (api) {
-  //export default async function (api, ctx) {
-  // TODO: work with compatibility
-  /*
-  api.compatibleWith("quasar", "^2.0.0");
-
-  if (api.hasVite === true) {
-    api.compatibleWith("@quasar/app-vite", "^2.0.0-beta.1");
-  } else {
-    // api.hasWebpack === true
-    api.compatibleWith("@quasar/app-webpack", "^4.0.0-beta.1");
-  }
-  */
-
-  const { config } = require(api.resolve.app("src-hr/config.cjs"));
-  const hybridConf = config();
-
-  const usesRouterApi =
-    !hybridConf.killSwitch &&
-    ["routerRenderApi", "routerApi"].includes(api.prompts.apiSet);
-
-  const usesRenderApi =
-    !hybridConf.killSwitch &&
-    ["routerRenderApi", "renderApi"].includes(api.prompts.apiSet);
-
-  api.extendQuasarConf((quasarConf, api) => {
-    // manage runtime middlewares
-    manageMiddlewares({
-      middlewares: quasarConf.ssr.middlewares,
-      usesRouterApi,
-      usesRenderApi,
-    });
-
-    // manage ignore of HMR for pages in Vite builds
-    manageIgnoreHMR({ api, quasarConf, hybridConf });
-  });
-
-  // kill after middleware management if no render API (middles must run so they are removed appropriate)
-  if (!usesRenderApi) return;
-
-  api.afterDev(async (api, { quasarConf }) => {
-    if (quasarConf.ctx.modeName === "ssr") {
-      // prepare dev SPA client entry index file
-      await new PrepareSPA({ api, quasarConf, hybridConf }).run();
-
-      // prerender SSG routes
-      await new PrepareSSG({ api, quasarConf, hybridConf }).run();
-    }
-  });
-
-  api.afterBuild(async (api, { quasarConf }) => {
-    if (quasarConf.ctx.modeName === "ssr") {
-      // prepare prod SPA client entry index file
-      await new PrepareSPA({ api, quasarConf, hybridConf }).run();
-
-      // prerender SSG routes
-      await new PrepareSSG({ api, quasarConf, hybridConf }).run();
-    }
-  });
 };

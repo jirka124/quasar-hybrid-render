@@ -6,23 +6,23 @@
 </template>
 
 <script>
-import { defineComponent } from 'vue'
+import { defineComponent } from "vue";
 
 export default defineComponent({
-  name: 'TimeCompare',
+  name: "TimeCompare",
   props: {
     subject: {
       type: String,
-      default: "No Subject"
+      default: "No Subject",
     },
     time: {
       type: [Date, null],
-      required: true
+      required: true,
     },
     timeNow: {
       type: [Date, null],
-      required: true
-    }
+      required: true,
+    },
   },
   computed: {
     timeStr() {
@@ -31,17 +31,18 @@ export default defineComponent({
     },
     timestampStr() {
       if (this.time === null || this.timeNow === null) return 0;
-      const timeElapse = ((this.timeNow - this.time) / 1000);
+      const timeElapse = (this.timeNow - this.time) / 1000;
 
-      if (timeElapse < 0) return `That is in ${Math.abs(timeElapse.toFixed(0))}s`
-      return `That is ${timeElapse.toFixed(0)}s ago...`
-    }
+      if (timeElapse < 0)
+        return `That is in ${Math.abs(timeElapse.toFixed(0))}s`;
+      return `That is ${timeElapse.toFixed(0)}s ago...`;
+    },
   },
-})
+});
 </script>
 
 <style scoped>
-.time-comp>p {
+.time-comp > p {
   font-weight: 800;
 }
 </style>

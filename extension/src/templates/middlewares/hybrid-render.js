@@ -3,18 +3,18 @@
   You should not temper with this file, unless really needed.
 */
 
-import { ssrMiddleware } from "quasar/wrappers";
+import { defineSsrMiddleware } from "#q-app/wrappers";
 
 import {
   RenderCSR,
   RenderSSG,
   RenderISR,
   RenderSWR,
-} from "../../src-hr/Render.cjs";
-import { handleError } from "../../src-hr/utils.cjs";
-import { config } from "../../src-hr/config.cjs";
+} from "../../src-hr/Render.js";
+import { handleError } from "../../src-hr/utils.js";
+import { config } from "../../src-hr/config.js";
 
-export default ssrMiddleware(({ app, resolve, render, serve }) => {
+export default defineSsrMiddleware(({ app, resolve, render, serve }) => {
   // process hybrid routing (ISR, SSG, CSR)
   app.get(resolve.urlPath("*"), async (req, res, next) => {
     try {

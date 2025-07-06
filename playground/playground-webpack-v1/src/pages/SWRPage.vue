@@ -2,45 +2,76 @@
   <div id="m-swr">
     <ReloadNotify />
     <h2 id="m-swr-head">This page was rendered with SWR (20 sec. expire)</h2>
-    <b>current api state: <span id="api-res">{{ appStore.pageSpecific.apiState ? "TRUE" : "FALSE" }}</span></b>
-    <img id="m-swr-file" src="@/assets/file.svg" alt="file icon" width="256" height="256" loading="lazy">
+    <b
+      >current api state:
+      <span id="api-res">{{
+        appStore.pageSpecific.apiState ? "TRUE" : "FALSE"
+      }}</span></b
+    >
+    <img
+      id="m-swr-file"
+      src="@/assets/file.svg"
+      alt="file icon"
+      width="256"
+      height="256"
+      loading="lazy"
+    />
     <TimeNow :timeNow="nowTime" />
-    <TimeCompare subject="This page was rendered at" :time="renderTime" :timeNow="nowTime" id="render-elm"
-      :title="renderTime.toISOString()" />
-    <TimeCompare subject="This page was mounted at" :time="mountTime" :timeNow="nowTime" />
-    <TimeCompare subject="This means it will auto expire at" :time="expireTime" :timeNow="nowTime" />
-    <button class="btn-1" id="reinv-api" @click="reinvApi">Manual Expire API & reload</button>
-    <button class="btn-1" id="reinv-page" @click="reinvPage">Manual Expire Page & reload</button>
+    <TimeCompare
+      subject="This page was rendered at"
+      :time="renderTime"
+      :timeNow="nowTime"
+      id="render-elm"
+      :title="renderTime.toISOString()"
+    />
+    <TimeCompare
+      subject="This page was mounted at"
+      :time="mountTime"
+      :timeNow="nowTime"
+    />
+    <TimeCompare
+      subject="This means it will auto expire at"
+      :time="expireTime"
+      :timeNow="nowTime"
+    />
+    <button class="btn-1" id="reinv-api" @click="reinvApi">
+      Manual Expire API & reload
+    </button>
+    <button class="btn-1" id="reinv-page" @click="reinvPage">
+      Manual Expire Page & reload
+    </button>
   </div>
 </template>
 
 <script>
-import { defineComponent } from 'vue'
-import { mapStores } from "pinia"
-import { useAppStore } from "@/stores/app"
-import { useSWRHint } from "/src-hr/useHint.js"
-import { useSSRContext } from 'vue'
+import { defineComponent } from "vue";
+import { mapStores } from "pinia";
+import { useAppStore } from "@/stores/app";
+import { useSWRHint } from "/src-hr/useHint.js";
+import { useSSRContext } from "vue";
 import { api } from "@/boot/axios.js";
-import ReloadNotify from "@/components/ReloadNotify.vue"
-import TimeNow from "@/components/TimeNow.vue"
-import TimeCompare from "@/components/TimeCompare.vue"
+import ReloadNotify from "@/components/ReloadNotify.vue";
+import TimeNow from "@/components/TimeNow.vue";
+import TimeCompare from "@/components/TimeCompare.vue";
 
 export default defineComponent({
-  name: 'SWRPage',
+  name: "SWRPage",
   components: { ReloadNotify, TimeCompare, TimeNow },
   async preFetch({ store, ssrContext }) {
     const houby = 45;
     const result = await useSWRHint("hint1", ssrContext, () => {
       return new Promise((res, rej) => {
-        setTimeout(() => { res("RESULT_DATA " + houby) }, 200);
-      })
+        setTimeout(() => {
+          res("RESULT_DATA " + houby);
+        }, 200);
+      });
     });
 
     let result2 = null;
     try {
       result2 = await useSWRHint("hint2", ssrContext, async () => {
         return (await api.post("/get-api-1-state")).data;
-      })
+      });
     } catch (e) {
       console.error(e);
     }
@@ -54,10 +85,10 @@ export default defineComponent({
 
       useSWRHint("hint3", useSSRContext(), () => {
         return "RESULT_DATA " + houby;
-      })
+      });
       useSWRHint("hint4", null, () => {
-        return "RESULT_DATA " + (houby + 40)
-      })
+        return "RESULT_DATA " + (houby + 40);
+      });
     }
 
     // SSR is server side renderd (set render time only in server side)
@@ -68,18 +99,18 @@ export default defineComponent({
       EXPIRE_TIME: 20 * 1000, // 20 sec
       nowTime: null,
       mountTime: null,
-      nowTimeInterv: null
-    }
+      nowTimeInterv: null,
+    };
   },
   computed: {
     ...mapStores(useAppStore),
     renderTime() {
       // reuse server provided renderTime
-      return new Date(this.appStore.renderTime)
+      return new Date(this.appStore.renderTime);
     },
     expireTime() {
       return new Date(+this.renderTime + this.EXPIRE_TIME);
-    }
+    },
   },
   methods: {
     incTimeNow() {
@@ -88,9 +119,7 @@ export default defineComponent({
     async reinvApi() {
       let r;
       try {
-        r = (
-          await this.$api.post("/toggle-api-1-state")
-        ).data;
+        r = (await this.$api.post("/toggle-api-1-state")).data;
         if (r.reqState !== null) alert(`ERR: ${r.reqState}`);
         else location.reload();
       } catch (error) {
@@ -100,15 +129,13 @@ export default defineComponent({
     async reinvPage() {
       let r;
       try {
-        r = (
-          await this.$api.post("/path-reinv-2")
-        ).data;
+        r = (await this.$api.post("/path-reinv-2")).data;
         if (r.reqState !== null) alert(`ERR: ${r.reqState}`);
         else location.reload();
       } catch (error) {
         console.error(error);
       }
-    }
+    },
   },
   mounted() {
     this.mountTime = new Date();
@@ -117,8 +144,8 @@ export default defineComponent({
   },
   beforeUnmount() {
     clearInterval(this.nowTimeInterv);
-  }
-})
+  },
+});
 </script>
 
 <style scoped>

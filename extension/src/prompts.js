@@ -39,7 +39,7 @@
 
  */
 
-module.exports = async function (api) {
+export default async function (api) {
   return [
     {
       name: "apiSet",
@@ -64,4 +64,4 @@ module.exports = async function (api) {
       ],
     },
   ];
-};
+}

@@ -27,13 +27,14 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const BUILD = args.b || "vite";
+const BUILD_VERSION = args.v || 1;
 const TARGET = args.t || "playground";
 
 let PROJECT_ROOT;
 if (TARGET === "playground") {
   PROJECT_ROOT = path.join(
     __dirname,
-    `../../playground/playground-${BUILD}-v1`
+    `../../playground/playground-${BUILD}-v${BUILD_VERSION}`
   );
 } else {
   PROJECT_ROOT = path.join(
@@ -141,7 +142,11 @@ const runTestSequence = async ({ browser }) => {
 
 const runTest = async () => {
   console.log("-- RUNNING APP TEST --");
-  console.log(` - tested engine: ${BUILD}`);
+  console.log(
+    ` - tested engine: ${BUILD} ${
+      TARGET === "playground" ? "v" + BUILD_VERSION : ""
+    }`
+  );
   console.log(` - tested target: ${TARGET}`);
   console.log();
 
